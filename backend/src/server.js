@@ -1,6 +1,8 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import path from "path";
+import cors from "cors";
+
 import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -17,10 +19,13 @@ const __dirname = path.dirname(__filename);
 const PORT = ENV.PORT || 3000;
 
 app.use(express.json());  //REquest body parsing middleware
+app.use(cors({origin: ENV.CLIENT_URL, credentials: true})); //CORS middleware
 app.use(cookieParser()); //Cookie parsing middleware
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+
+console.log("CLIENT_URL:", ENV.CLIENT_URL);
 
 // Make ready for deployment
 if (ENV.NODE_ENV === "production") {
