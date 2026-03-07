@@ -1,48 +1,52 @@
 import { SearchIcon, XIcon } from "lucide-react";
-import { useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useGroupStore } from "../store/useGroupStore";
 
-export default function ActiveTabSwitch() {
-  const { activeTab, setActiveTab, activeFilter, setActiveFilter, chats, unreadCounts } = useChatStore();
+const TABS = ["chats", "contacts", "groups"];
+
+export default function ActiveTabSwitch({ extraActions }) {
+  const {
+    activeTab, setActiveTab, activeFilter, setActiveFilter,
+    chats, unreadCounts, sidebarSearch, setSidebarSearch,
+  } = useChatStore();
   const { onlineUsers } = useAuthStore();
-  const [search, setSearch] = useState("");
+  const { groups } = useGroupStore();
 
-  const totalUnread = Object.values(unreadCounts || {}).reduce((a, b) => a + b, 0);
-  const totalOnline = (chats || []).filter(
-    (c) => (onlineUsers || []).includes(c._id)
-).length;
-
-  useEffect(() => {
-    const el = document.getElementById("sidebar-search-hidden");
-    if (el) el.value = search;
-  }, [search]);
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+  const totalOnline = chats.filter((c) => onlineUsers.includes(c._id)).length;
 
   return (
     <div className="flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
 
       {/* Tab row */}
-      <div className="flex" style={{ borderBottom: '1px solid var(--border)' }}>
-        {["chats", "contacts"].map((tab) => (
+      <div className="flex items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+        {TABS.map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
-            className="flex-1 py-3.5 text-[13px] font-semibold transition-all relative capitalize"
+            onClick={() => { setActiveTab(tab); setSidebarSearch(""); }}
+            className="flex-1 py-3 text-[12px] font-semibold transition-all relative capitalize"
             style={{ color: activeTab === tab ? '#4fd1c5' : 'var(--text-muted)' }}
           >
             {tab}
+            {tab === "chats" && totalUnread > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] ml-1 font-bold text-white"
+                style={{ background: '#4fd1c5' }}>{totalUnread > 9 ? "9+" : totalUnread}</span>
+            )}
+            {tab === "groups" && groups.length > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] ml-1 font-bold text-white"
+                style={{ background: '#667eea' }}>{groups.length}</span>
+            )}
             <span
               className="absolute bottom-0 left-1/4 right-1/4 h-[2px] rounded-full transition-all duration-300"
-              style={{
-                background: activeTab === tab ? '#4fd1c5' : 'transparent',
-                boxShadow: activeTab === tab ? '0 0 8px rgba(79,209,197,0.5)' : 'none',
-              }}
+              style={{ background: activeTab === tab ? '#4fd1c5' : 'transparent' }}
             />
           </button>
         ))}
+        {extraActions && <div className="pr-2 flex-shrink-0">{extraActions}</div>}
       </div>
 
-      {/* Search bar */}
+      {/* Search bar — now connected to store ✅ */}
       <div className="px-3 py-2.5">
         <div className="relative">
           <SearchIcon
@@ -51,19 +55,19 @@ export default function ActiveTabSwitch() {
           />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={activeTab === "chats" ? "Search or start new chat" : "Search contacts…"}
+            value={sidebarSearch}
+            onChange={(e) => setSidebarSearch(e.target.value)}
+            placeholder={
+              activeTab === "chats"    ? "Search or start new chat" :
+              activeTab === "contacts" ? "Search contacts…" :
+                                        "Search groups…"
+            }
             className="w-full py-2.5 pl-10 pr-9 text-sm border-none focus:outline-none transition-all"
-            style={{
-              background: 'var(--bg-input)',
-              borderRadius: '9999px',
-              color: 'var(--text-primary)',
-            }}
+            style={{ background: 'var(--bg-input)', borderRadius: '9999px', color: 'var(--text-primary)' }}
           />
-          {search && (
+          {sidebarSearch && (
             <button
-              onClick={() => setSearch("")}
+              onClick={() => setSidebarSearch("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
               style={{ color: 'var(--text-muted)' }}
             >
@@ -89,17 +93,12 @@ export default function ActiveTabSwitch() {
           />
         </div>
       )}
-
-      {/* Hidden bridge so child lists can read the search value */}
-      <input type="hidden" id="sidebar-search-hidden" defaultValue="" />
     </div>
   );
 }
 
 function FilterPill({ label, active, onClick }) {
   return (
-    <button onClick={onClick} className={`filter-pill ${active ? "active" : ""}`}>
-      {label}
-    </button>
+    <button onClick={onClick} className={`filter-pill ${active ? "active" : ""}`}>{label}</button>
   );
 }

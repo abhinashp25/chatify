@@ -1,16 +1,24 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  LogOutIcon, Volume2Icon, VolumeOffIcon,
-  MoreVerticalIcon, BellIcon, BellOffIcon,
-  UserCircleIcon, InfoIcon, EditIcon, MoonIcon, SunIcon,
+  LogOutIcon, Volume2Icon, VolumeOffIcon, MoreVerticalIcon,
+  BellIcon, BellOffIcon, UserCircleIcon, InfoIcon, EditIcon,
+  ArchiveIcon, SparklesIcon,
 } from "lucide-react";
+
+function AIIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9l-1 2H8l1-2-1-2h4l1 2zm4 0l-1 2h-2l1-2-1-2h2l1 2z"/>
+    </svg>
+  );
+}
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore }  from "../store/useChatStore";
 import toast from "react-hot-toast";
 
 const clickSound = new Audio("/sounds/mouse-click.mp3");
 
-export default function ProfileHeader() {
+export default function ProfileHeader({ onShowAI, onShowArchived }) {
   const { logout, authUser, updateProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound }     = useChatStore();
   const [selectedImg, setSelectedImg]       = useState(null);
@@ -28,13 +36,9 @@ export default function ProfileHeader() {
   }, []);
 
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = async () => {
-      setSelectedImg(reader.result);
-      await updateProfile({ profilePic: reader.result });
-    };
+    reader.onloadend = async () => { setSelectedImg(reader.result); await updateProfile({ profilePic: reader.result }); };
     reader.readAsDataURL(file);
   };
 
@@ -57,21 +61,15 @@ export default function ProfileHeader() {
   };
 
   return (
-    <div
-      className="flex items-center gap-3 px-4 h-[64px] flex-shrink-0 relative"
-      style={{ background: 'var(--bg-header)', borderBottom: '1px solid var(--border)' }}
-    >
-      {/* Subtle gradient accent line at top */}
+    <div className="flex items-center gap-3 px-4 h-[64px] flex-shrink-0 relative"
+      style={{ background: 'var(--bg-header)', borderBottom: '1px solid var(--border)' }}>
       <div className="absolute top-0 left-0 right-0 h-[2px]"
-        style={{ background: 'linear-gradient(90deg, #4fd1c5 0%, #667eea 100%)', opacity: 0.6 }} />
+        style={{ background: 'linear-gradient(90deg, #4fd1c5 0%, #667eea 100%)', opacity: 0.7 }} />
 
-      {/* Avatar + click to change */}
+      {/* Avatar */}
       <button className="relative group flex-shrink-0" onClick={() => fileRef.current.click()}>
-        <img
-          src={selectedImg || authUser.profilePic || "/avatar.png"}
-          alt="me"
-          className="w-10 h-10 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-[#4fd1c5]/40 transition-all"
-        />
+        <img src={selectedImg || authUser.profilePic || "/avatar.png"} alt="me"
+          className="w-10 h-10 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-[#4fd1c5]/40 transition-all" />
         <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
           <EditIcon className="w-3.5 h-3.5 text-white" />
         </div>
@@ -82,28 +80,28 @@ export default function ProfileHeader() {
 
       {/* App name */}
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>Chatify</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-[15px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>Chatify</p>
+          <SparklesIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#4fd1c5' }} />
+        </div>
         <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{authUser.fullName}</p>
       </div>
 
-      {/* Right icons */}
-      <div className="flex items-center gap-0.5 flex-shrink-0 relative" ref={menuRef}>
-        <button onClick={handleSound} title={isSoundEnabled ? "Mute" : "Unmute"} className="icon-btn">
-          {isSoundEnabled
-            ? <Volume2Icon className="w-[17px] h-[17px]" />
-            : <VolumeOffIcon className="w-[17px] h-[17px]" />}
-        </button>
+      {/* AI Chat shortcut */}
+      <button onClick={onShowAI} className="icon-btn" title="Chatify AI">
+        <AIIcon className="w-[17px] h-[17px]" />
+      </button>
 
-        {/* ⋮ Three-dot menu */}
-        <button
-          onClick={() => setMenuOpen((v) => !v)}
-          className={`icon-btn ${menuOpen ? "active" : ""}`}
-          title="More options"
-        >
+      {/* Menu */}
+      <div className="flex items-center gap-0.5 flex-shrink-0 relative" ref={menuRef}>
+        <button onClick={handleSound} className="icon-btn" title={isSoundEnabled ? "Mute" : "Unmute"}>
+          {isSoundEnabled ? <Volume2Icon className="w-[17px] h-[17px]" /> : <VolumeOffIcon className="w-[17px] h-[17px]" />}
+        </button>
+        <button onClick={() => setMenuOpen((v) => !v)}
+          className={`icon-btn ${menuOpen ? "active" : ""}`} title="More options">
           <MoreVerticalIcon className="w-[17px] h-[17px]" />
         </button>
 
-        {/* Dropdown */}
         {menuOpen && (
           <div className="dropdown-menu animate-dropdown" style={{ top: '48px', right: 0 }}>
             <button className="dropdown-item" onClick={() => { fileRef.current.click(); setMenuOpen(false); }}>
@@ -122,21 +120,24 @@ export default function ProfileHeader() {
                 : <VolumeOffIcon className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />}
               {isSoundEnabled ? "Sound on" : "Sound off"}
             </button>
+            <button className="dropdown-item" onClick={() => { onShowArchived?.(); setMenuOpen(false); }}>
+              <ArchiveIcon className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+              Archived chats
+            </button>
+            <button className="dropdown-item" onClick={() => { onShowAI?.(); setMenuOpen(false); }}>
+              <AIIcon className="w-4 h-4" style={{ color: '#667eea' }} />
+              Chatify AI
+            </button>
             <button className="dropdown-item" onClick={() => {
-              toast("Chatify v2.0 — Real-time messaging 💬", { icon: "ℹ️" });
-              setMenuOpen(false);
+              toast("Chatify v2.0 · AI-powered messaging 🤖", { icon: "ℹ️" }); setMenuOpen(false);
             }}>
               <InfoIcon className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               About Chatify
             </button>
             <div className="dropdown-divider" />
-            <button
-              className="dropdown-item"
-              style={{ color: '#fc8181' }}
-              onClick={() => { logout(); setMenuOpen(false); }}
-            >
-              <LogOutIcon className="w-4 h-4" />
-              Log out
+            <button className="dropdown-item" style={{ color: '#fc8181' }}
+              onClick={() => { logout(); setMenuOpen(false); }}>
+              <LogOutIcon className="w-4 h-4" /> Log out
             </button>
           </div>
         )}

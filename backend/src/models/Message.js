@@ -21,6 +21,10 @@ const messageSchema = new mongoose.Schema(
       type: String,
     },
     
+    audio: {
+      type: String, // base64 or Cloudinary URL
+    },
+    
     isRead: {
       type: Boolean,
       default: false,

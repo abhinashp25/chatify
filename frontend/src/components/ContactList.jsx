@@ -4,18 +4,16 @@ import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
 export default function ContactList() {
-  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, selectedUser } = useChatStore();
+  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, selectedUser, sidebarSearch } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => { getAllContacts(); }, [getAllContacts]);
 
-  const searchEl  = document.getElementById("sidebar-search");
-  const searchVal = searchEl?.value?.toLowerCase() || "";
-
   if (isUsersLoading) return <UsersLoadingSkeleton />;
 
+  // Filter from store — reactive ✅
   const filtered = allContacts.filter((c) =>
-    !searchVal || c.fullName.toLowerCase().includes(searchVal)
+    !sidebarSearch || c.fullName.toLowerCase().includes(sidebarSearch.toLowerCase())
   );
 
   if (filtered.length === 0) {
@@ -31,7 +29,7 @@ export default function ContactList() {
           </svg>
         </div>
         <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-          {searchVal ? `No contacts match "${searchVal}"` : "No contacts yet"}
+          {sidebarSearch ? `No contacts match "${sidebarSearch}"` : "No contacts yet"}
         </p>
       </div>
     );
@@ -49,9 +47,7 @@ export default function ContactList() {
     <div>
       {Object.keys(groups).sort().map((letter) => (
         <div key={letter}>
-          {/* Section header */}
           <div className="section-header">{letter}</div>
-
           {groups[letter].map((contact) => {
             const isOnline = onlineUsers.includes(contact._id);
             const isActive = selectedUser?._id === contact._id;
@@ -62,22 +58,17 @@ export default function ContactList() {
                 className={`chat-row ${isActive ? "active" : ""}`}
               >
                 <div className="relative flex-shrink-0">
-                  <img
-                    src={contact.profilePic || "/avatar.png"}
-                    alt={contact.fullName}
+                  <img src={contact.profilePic || "/avatar.png"} alt={contact.fullName}
                     className="w-12 h-12 rounded-full object-cover"
-                    style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
-                  />
+                    style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }} />
                   {isOnline && (
-                    <span
-                      className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-                      style={{ background: '#48bb78', borderColor: 'var(--bg-secondary)' }}
-                    />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+                      style={{ background: '#48bb78', borderColor: 'var(--bg-secondary)' }} />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                    {contact.fullName}
+                    {sidebarSearch ? highlight(contact.fullName, sidebarSearch) : contact.fullName}
                   </p>
                   <p className="text-[12px] mt-0.5 truncate"
                     style={{ color: isOnline ? '#48bb78' : 'var(--text-muted)' }}>
@@ -93,5 +84,17 @@ export default function ContactList() {
         </div>
       ))}
     </div>
+  );
+}
+
+function highlight(text, query) {
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-400/30 text-inherit rounded px-0.5">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
   );
 }

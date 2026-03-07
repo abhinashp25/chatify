@@ -63,7 +63,7 @@ export const getMessagesByUserId = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text, image, audio } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -73,13 +73,17 @@ export const sendMessage = async (req, res) => {
     const receiverExists = await User.exists({ _id: receiverId });
     if (!receiverExists) return res.status(404).json({ message: "Receiver not found." });
 
-    let imageUrl;
+    let imageUrl, audioUrl;
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
     }
+    if (audio) {
+      const uploadResponse = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
+      audioUrl = uploadResponse.secure_url;
+    }
 
-    const newMessage = new Message({ senderId, receiverId, text, image: imageUrl });
+    const newMessage = new Message({ senderId, receiverId, text, image: imageUrl, audio: audioUrl });
     await newMessage.save();
 
     const receiverSocketId = getReceiverSocketId(receiverId);
@@ -133,7 +137,6 @@ export const toggleReaction = async (req, res) => {
       message.senderId.equals(userId) || message.receiverId.equals(userId);
     if (!isParticipant) return res.status(403).json({ message: "Not allowed." });
 
-    // Find any existing reaction by this user
     const existingIdx = message.reactions.findIndex((r) => r.userId.equals(userId));
 
     if (existingIdx !== -1) {
@@ -213,5 +216,32 @@ export const deleteMessage = async (req, res) => {
   } catch (error) {
     console.log("Error in deleteMessage controller:", error.message);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const toggleArchiveChat = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { partnerId } = req.params;
+    const user = await User.findById(userId);
+    const isArchived = user.archivedChats.some((id) => id.equals(partnerId));
+    if (isArchived) {
+      user.archivedChats = user.archivedChats.filter((id) => !id.equals(partnerId));
+    } else {
+      user.archivedChats.push(partnerId);
+    }
+    await user.save();
+    res.json({ archived: !isArchived, partnerId });
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getArchivedChats = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate("archivedChats", "-password");
+    res.json(user.archivedChats || []);
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
   }
 };

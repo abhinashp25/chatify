@@ -7,20 +7,18 @@ import { useAuthStore } from "../store/useAuthStore";
 export default function ChatsList() {
   const {
     getMyChatPartners, chats, isUsersLoading, setSelectedUser,
-    selectedUser, unreadCounts, activeFilter,
+    selectedUser, unreadCounts, activeFilter, sidebarSearch,
   } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => { getMyChatPartners(); }, [getMyChatPartners]);
 
-  const searchEl  = document.getElementById("sidebar-search");
-  const searchVal = searchEl?.value?.toLowerCase() || "";
-
   if (isUsersLoading) return <UsersLoadingSkeleton />;
   if (chats.length === 0) return <NoChatsFound />;
 
+  // Filter by search + active filter — reads from STORE (reactive ✅)
   const visible = chats.filter((c) => {
-    if (searchVal && !c.fullName.toLowerCase().includes(searchVal)) return false;
+    if (sidebarSearch && !c.fullName.toLowerCase().includes(sidebarSearch.toLowerCase())) return false;
     if (activeFilter === "unread")  return (unreadCounts[c._id] || 0) > 0;
     if (activeFilter === "online")  return onlineUsers.includes(c._id);
     return true;
@@ -37,7 +35,8 @@ export default function ChatsList() {
           </svg>
         </div>
         <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-          {activeFilter !== "all" ? `No ${activeFilter} chats` : "No chats found"}
+          {sidebarSearch ? `No chats match "${sidebarSearch}"` :
+           activeFilter !== "all" ? `No ${activeFilter} chats` : "No chats found"}
         </p>
       </div>
     );
@@ -58,17 +57,12 @@ export default function ChatsList() {
           >
             {/* Avatar */}
             <div className="relative flex-shrink-0">
-              <img
-                src={chat.profilePic || "/avatar.png"}
-                alt={chat.fullName}
+              <img src={chat.profilePic || "/avatar.png"} alt={chat.fullName}
                 className="w-12 h-12 rounded-full object-cover"
-                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
-              />
+                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }} />
               {isOnline && (
-                <span
-                  className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-                  style={{ background: '#48bb78', borderColor: 'var(--bg-secondary)' }}
-                />
+                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+                  style={{ background: '#48bb78', borderColor: 'var(--bg-secondary)' }} />
               )}
             </div>
 
@@ -76,7 +70,7 @@ export default function ChatsList() {
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-[14px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                  {chat.fullName}
+                  {sidebarSearch ? highlight(chat.fullName, sidebarSearch) : chat.fullName}
                 </p>
                 {isOnline && (
                   <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: '#48bb78' }}>
@@ -91,13 +85,24 @@ export default function ChatsList() {
 
             {/* Unread badge */}
             {unread > 0 && (
-              <div className="unread-badge flex-shrink-0">
-                {unread > 99 ? "99+" : unread}
-              </div>
+              <div className="unread-badge flex-shrink-0">{unread > 99 ? "99+" : unread}</div>
             )}
           </div>
         );
       })}
     </div>
+  );
+}
+
+// Highlight matching text in name
+function highlight(text, query) {
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-400/30 text-inherit rounded px-0.5">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
   );
 }

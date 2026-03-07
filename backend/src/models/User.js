@@ -20,6 +20,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+
+    bio: { 
+        type: String,
+        default: "",
+        maxlength: 160 
+    },
+    
+    archivedChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 }, {timestamps: true}); //createdAt, updatedAt
 
 const User = mongoose.model("User", userSchema);
