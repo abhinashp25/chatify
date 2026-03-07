@@ -24,7 +24,20 @@ const messageSchema = new mongoose.Schema(
     audio: {
       type: String, // base64 or Cloudinary URL
     },
+
+    replyTo: {
+      messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+      text:      { type: String },        // snapshot of original text
+      senderName:{ type: String },        // snapshot of original sender name
+      image:     { type: String },        // snapshot if it was an image
+    },
     
+    isForwarded: { type: Boolean, default: false },
+
+    starredBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    isPinned: { type: Boolean, default: false },
+
     isRead: {
       type: Boolean,
       default: false,
@@ -38,7 +51,6 @@ const messageSchema = new mongoose.Schema(
     ],
 
      deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    // isDeletedForAll: sender chose "unsend" — hidden for everyone
     isDeletedForAll: {
       type: Boolean,
       default: false,

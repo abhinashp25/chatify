@@ -18,7 +18,7 @@ import toast from "react-hot-toast";
 
 const clickSound = new Audio("/sounds/mouse-click.mp3");
 
-export default function ProfileHeader({ onShowAI, onShowArchived }) {
+export default function ProfileHeader({ onShowAI, onShowArchived, onShowStarred }) {
   const { logout, authUser, updateProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound }     = useChatStore();
   const [selectedImg, setSelectedImg]       = useState(null);
@@ -123,6 +123,12 @@ export default function ProfileHeader({ onShowAI, onShowArchived }) {
             <button className="dropdown-item" onClick={() => { onShowArchived?.(); setMenuOpen(false); }}>
               <ArchiveIcon className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               Archived chats
+            </button>
+            <button className="dropdown-item" onClick={() => { onShowStarred?.(); setMenuOpen(false); }}>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#f6e05e' }}>
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+              </svg>
+              Starred messages
             </button>
             <button className="dropdown-item" onClick={() => { onShowAI?.(); setMenuOpen(false); }}>
               <AIIcon className="w-4 h-4" style={{ color: '#667eea' }} />

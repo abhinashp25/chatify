@@ -1,9 +1,15 @@
-
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent";
 
-const SYSTEM_PROMPT = `You are Chatify AI, a friendly smart assistant inside a messaging app.
+function getSystemPrompt() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+  return `You are Chatify AI, a friendly smart assistant built into a real-time chat app called Chatify.
+Today's date is ${dateStr}. Current time is approximately ${timeStr}.
+You were built by the Chatify development team (not Google, not Anthropic — you are Chatify AI).
 Help users with: answering questions, writing messages, coding help, advice, and anything they ask.
-Keep replies concise and conversational. Use plain text, no heavy markdown.`;
+Keep replies concise, warm, and conversational. Use plain text only — no markdown headers or bullet spam.`;
+}
 
 export const sendAIMessage = async (req, res) => {
   try {
@@ -17,10 +23,8 @@ export const sendAIMessage = async (req, res) => {
         message: "Add GEMINI_API_KEY to your backend .env file. Get free key at: https://aistudio.google.com/app/apikey",
       });
 
-    // Gemini uses "user"/"model" roles
-    // Prepend system as first user message for compatibility
     const contents = [
-      { role: "user", parts: [{ text: `[System: ${SYSTEM_PROMPT}]\n\nUser says: ${messages[0].content}` }] },
+      { role: "user", parts: [{ text: `[System: ${getSystemPrompt()}]\n\nUser says: ${messages[0].content}` }] },
       ...messages.slice(1).map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],

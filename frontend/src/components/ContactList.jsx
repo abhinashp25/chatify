@@ -3,39 +3,39 @@ import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
+function lastSeenText(isoStr) {
+  if (!isoStr) return "last seen a while ago";
+  const d    = new Date(isoStr);
+  const now  = new Date();
+  const diff = now - d;
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(diff / 3600000);
+  if (mins < 2)  return "last seen just now";
+  if (mins < 60) return `last seen ${mins} min ago`;
+  if (hrs  < 24) return `last seen ${hrs}h ago`;
+  return `last seen ${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}`;
+}
+
 export default function ContactList() {
-  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, selectedUser, sidebarSearch } = useChatStore();
+  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, selectedUser, sidebarSearch, lastSeenMap } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
-  useEffect(() => { getAllContacts(); }, [getAllContacts]);
-
+  useEffect(() => { getAllContacts(); }, []);
   if (isUsersLoading) return <UsersLoadingSkeleton />;
 
-  // Filter from store — reactive ✅
   const filtered = allContacts.filter((c) =>
     !sidebarSearch || c.fullName.toLowerCase().includes(sidebarSearch.toLowerCase())
   );
 
-  if (filtered.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3 px-6">
-        <div className="w-14 h-14 rounded-full flex items-center justify-center"
-          style={{ background: 'var(--bg-panel)' }}>
-          <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-            style={{ color: 'var(--text-muted)' }}>
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-          {sidebarSearch ? `No contacts match "${sidebarSearch}"` : "No contacts yet"}
-        </p>
-      </div>
-    );
-  }
+  if (!filtered.length) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="text-4xl opacity-40">👥</div>
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        {sidebarSearch ? `No results for "${sidebarSearch}"` : "No contacts"}
+      </p>
+    </div>
+  );
 
-  // Group A–Z
   const groups = filtered.reduce((acc, c) => {
     const letter = c.fullName[0].toUpperCase();
     if (!acc[letter]) acc[letter] = [];
@@ -51,12 +51,11 @@ export default function ContactList() {
           {groups[letter].map((contact) => {
             const isOnline = onlineUsers.includes(contact._id);
             const isActive = selectedUser?._id === contact._id;
+            const lastSeen = lastSeenMap[contact._id] || contact.lastSeen;
+
             return (
-              <div
-                key={contact._id}
-                onClick={() => setSelectedUser(contact)}
-                className={`chat-row ${isActive ? "active" : ""}`}
-              >
+              <div key={contact._id} onClick={() => setSelectedUser(contact)}
+                className={`chat-row ${isActive ? "active" : ""}`}>
                 <div className="relative flex-shrink-0">
                   <img src={contact.profilePic || "/avatar.png"} alt={contact.fullName}
                     className="w-12 h-12 rounded-full object-cover"
@@ -72,12 +71,9 @@ export default function ContactList() {
                   </p>
                   <p className="text-[12px] mt-0.5 truncate"
                     style={{ color: isOnline ? '#48bb78' : 'var(--text-muted)' }}>
-                    {isOnline ? "Online" : "Tap to start chatting"}
+                    {isOnline ? "Online" : lastSeenText(lastSeen)}
                   </p>
                 </div>
-                {isOnline && (
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#48bb78' }} />
-                )}
               </div>
             );
           })}

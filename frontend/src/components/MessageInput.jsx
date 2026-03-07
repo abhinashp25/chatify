@@ -1,25 +1,35 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore }  from "../store/useChatStore";
 import VoiceRecorder     from "./VoiceRecorder";
 import toast from "react-hot-toast";
-import { ImageIcon, SendIcon, XIcon, SmileIcon } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, SmileIcon, PaperclipIcon } from "lucide-react";
 
 const STOP_DELAY   = 1500;
-const QUICK_EMOJIS = ["😊","😂","❤️","👍","🔥","😢","😮","🙏","😍","🎉","👏","😎","🤔","😅","🥳","💯"];
+const QUICK_EMOJIS = ["😊","😂","❤️","👍","🔥","😢","😮","🙏","😍","🎉","👏","😎","🤔","😅","🥳","💯","🫡","🥹","💀","🤣","😭","🙌","✨","💪","👀","🎯","💬","🫶"];
 
 export default function MessageInput({ onTextChange }) {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
-  const [text, setText]               = useState("");
-  const [imgPreview, setImgPreview]   = useState(null);
-  const [emojiOpen, setEmojiOpen]     = useState(false);
-  const [voiceMode, setVoiceMode]     = useState(false);
-  const fileRef      = useRef(null);
-  const inputRef     = useRef(null);
-  const timerRef     = useRef(null);
-  const typingRef    = useRef(false);
+  const [text, setText]             = useState("");
+  const [imgPreview, setImgPreview] = useState(null);
+  const [emojiOpen, setEmojiOpen]   = useState(false);
+  const [voiceMode, setVoiceMode]   = useState(false);
+  const fileRef   = useRef(null);
+  const inputRef  = useRef(null);
+  const timerRef  = useRef(null);
+  const typingRef = useRef(false);
 
-  const { sendMessage, isSoundEnabled, emitTyping, emitStopTyping } = useChatStore();
+  const { sendMessage, isSoundEnabled, emitTyping, emitStopTyping, pendingInput, clearPendingInput } = useChatStore();
+
+  // When SmartReplies sets a pendingInput, pick it up here
+  useEffect(() => {
+    if (pendingInput !== null) {
+      setText(pendingInput);
+      onTextChange?.(pendingInput);
+      clearPendingInput();
+      inputRef.current?.focus();
+    }
+  }, [pendingInput]);
 
   const handleTyping = useCallback((val) => {
     onTextChange?.(val);
@@ -72,11 +82,10 @@ export default function MessageInput({ onTextChange }) {
       {imgPreview && (
         <div className="mb-2.5 flex items-start">
           <div className="relative">
-            <img src={imgPreview} alt="Preview"
-              className="w-20 h-20 object-cover rounded-xl border" style={{ borderColor: 'var(--border)' }} />
+            <img src={imgPreview} alt="Preview" className="w-20 h-20 object-cover rounded-xl border" style={{ borderColor: 'var(--border)' }} />
             <button type="button"
               onClick={() => { setImgPreview(null); if (fileRef.current) fileRef.current.value = ""; }}
-              className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-white border transition-colors"
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-white border"
               style={{ background: 'var(--bg-panel)', borderColor: 'var(--border)' }}>
               <XIcon className="w-3 h-3" />
             </button>
@@ -99,18 +108,13 @@ export default function MessageInput({ onTextChange }) {
 
       {/* Input row */}
       <div className="flex items-center gap-2">
-        {/* Emoji */}
         <button type="button" onClick={() => setEmojiOpen((v) => !v)}
           className={`icon-btn flex-shrink-0 ${emojiOpen ? "active" : ""}`} title="Emoji">
           <SmileIcon className="w-5 h-5" />
         </button>
 
-        {/* Voice mode OR text input */}
         {voiceMode ? (
-          <VoiceRecorder
-            onSend={handleVoiceSend}
-            onCancel={() => setVoiceMode(false)}
-          />
+          <VoiceRecorder onSend={handleVoiceSend} onCancel={() => setVoiceMode(false)} />
         ) : (
           <>
             <input
@@ -123,21 +127,16 @@ export default function MessageInput({ onTextChange }) {
               className="msg-input"
             />
 
-            {/* Image attach */}
             <button type="button" onClick={() => fileRef.current?.click()}
               className="icon-btn flex-shrink-0" title="Attach image">
               <ImageIcon className="w-5 h-5" />
             </button>
             <input type="file" accept="image/*" ref={fileRef} onChange={handleImage} className="hidden" />
 
-            {/* Mic OR Send */}
             {canSend ? (
               <button type="button" onClick={handleSend}
-                className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
-                style={{
-                  background: 'linear-gradient(135deg, #4fd1c5 0%, #38b2ac 100%)',
-                  boxShadow: '0 4px 16px rgba(79,209,197,0.3)',
-                }}>
+                className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                style={{ background: 'linear-gradient(135deg, #4fd1c5, #38b2ac)', boxShadow: '0 4px 16px rgba(79,209,197,0.3)' }}>
                 <SendIcon className="w-4 h-4 text-white" />
               </button>
             ) : (

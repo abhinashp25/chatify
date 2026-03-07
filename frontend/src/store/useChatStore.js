@@ -15,29 +15,46 @@ export const useChatStore = create((set, get) => ({
   isSoundEnabled:    JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
   typingUsers:       {},
   searchQuery:       "",
-  sidebarSearch:     "",      // ← sidebar contact/chat search
+  sidebarSearch:     "",
   unreadCounts:      {},
+  replyingTo:        null,   
+  pendingInput:      null,   
+  starredMessages:   [],
+  lastSeenMap:       {},     
+  pinnedMessage:     null,   
 
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
     set({ isSoundEnabled: !get().isSoundEnabled });
   },
-
-  setActiveTab:    (tab)  => set({ activeTab: tab }),
-  setActiveFilter: (f)    => set({ activeFilter: f }),
-  setSelectedUser: (user) => {
-    set({ selectedUser: user });
+  setActiveTab:     (tab)  => set({ activeTab: tab }),
+  setActiveFilter:  (f)    => set({ activeFilter: f }),
+  setSelectedUser:  (user) => {
+    set({ selectedUser: user, replyingTo: null, pinnedMessage: null });
     if (user) set({ unreadCounts: { ...get().unreadCounts, [user._id]: 0 } });
   },
   setSearchQuery:   (q) => set({ searchQuery: q }),
-  setSidebarSearch: (q) => set({ sidebarSearch: q }),  // ← explicitly defined
+  setSidebarSearch: (q) => set({ sidebarSearch: q }),
+  setReplyingTo:    (msg) => set({ replyingTo: msg }),
+  clearReply:       () => set({ replyingTo: null }),
+  setPendingInput:  (text) => set({ pendingInput: text }),
+  clearPendingInput:() => set({ pendingInput: null }),
+
+  clearChat: async (userId) => {
+    try {
+      await axiosInstance.delete(`/messages/clear/${userId}`);
+      set({ messages: [] });
+      // Remove from chats list
+      set({ chats: get().chats.filter((c) => c._id !== userId) });
+    } catch (e) { toast.error(e.response?.data?.message || "Could not clear chat"); }
+  },
 
   getAllContacts: async () => {
     set({ isUsersLoading: true });
     try {
       const res = await axiosInstance.get("/messages/contacts");
       set({ allContacts: res.data });
-    } catch (e) { toast.error(e.response?.data?.message || "Something went wrong"); }
+    } catch (e) { toast.error(e.response?.data?.message || "Error"); }
     finally { set({ isUsersLoading: false }); }
   },
 
@@ -45,8 +62,11 @@ export const useChatStore = create((set, get) => ({
     set({ isUsersLoading: true });
     try {
       const res = await axiosInstance.get("/messages/chats");
-      set({ chats: res.data });
-    } catch (e) { toast.error(e.response?.data?.message || "Something went wrong"); }
+      // Seed unread counts from server response (only add, don't overwrite live counts)
+      const serverUnread = {};
+      res.data.forEach((c) => { if (c.unreadCount > 0) serverUnread[c._id] = c.unreadCount; });
+      set({ chats: res.data, unreadCounts: { ...serverUnread, ...get().unreadCounts } });
+    } catch (e) { toast.error(e.response?.data?.message || "Error"); }
     finally { set({ isUsersLoading: false }); }
   },
 
@@ -55,29 +75,41 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
-    } catch (e) { toast.error(e.response?.data?.message || "Something went wrong"); }
+      // Find pinned message
+      const pinned = res.data.find((m) => m.isPinned && !m.isDeletedForAll);
+      set({ pinnedMessage: pinned || null });
+    } catch (e) { toast.error(e.response?.data?.message || "Error"); }
     finally { set({ isMessagesLoading: false }); }
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser } = get();
-    const { authUser }     = useAuthStore.getState();
-    const tempId           = `temp-${Date.now()}`;
-    const optimisticMessage = {
+    const { selectedUser, replyingTo } = get();
+    const { authUser } = useAuthStore.getState();
+    const tempId = `temp-${Date.now()}`;
+
+    const payload = {
+      ...messageData,
+      replyTo: replyingTo || undefined,
+    };
+
+    const optimistic = {
       _id: tempId,
       senderId: authUser._id, receiverId: selectedUser._id,
       text: messageData.text, image: messageData.image, audio: messageData.audio,
+      replyTo: replyingTo || undefined,
+      isForwarded: messageData.isForwarded || false,
       createdAt: new Date().toISOString(), isOptimistic: true, isRead: false, reactions: [],
     };
-    set({ messages: [...get().messages, optimisticMessage] });
+
+    set({ messages: [...get().messages, optimistic], replyingTo: null });
+
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, payload);
       set({ messages: get().messages.map((m) => m._id === tempId ? res.data : m) });
-      const already = get().chats.find((c) => c._id === selectedUser._id);
-      if (!already) set({ chats: [selectedUser, ...get().chats] });
+      get().getMyChatPartners();
     } catch (e) {
       set({ messages: get().messages.filter((m) => m._id !== tempId) });
-      toast.error(e.response?.data?.message || "Something went wrong");
+      toast.error(e.response?.data?.message || "Send failed");
     }
   },
 
@@ -88,27 +120,44 @@ export const useChatStore = create((set, get) => ({
         messages: get().messages.map((m) => m.senderId === senderId && !m.isRead ? { ...m, isRead: true } : m),
         unreadCounts: { ...get().unreadCounts, [senderId]: 0 },
       });
-    } catch (e) { console.error("markAsRead error:", e); }
+    } catch {}
   },
 
   toggleReaction: async (messageId, emoji) => {
     try {
       const res = await axiosInstance.put(`/messages/react/${messageId}`, { emoji });
       set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, reactions: res.data.reactions } : m) });
-    } catch (e) { toast.error(e.response?.data?.message || "Could not add reaction"); }
+    } catch (e) { toast.error("Could not react"); }
   },
 
   deleteMessage: async (messageId, deleteForEveryone) => {
     try {
       await axiosInstance.delete(`/messages/${messageId}`, { data: { deleteForEveryone } });
       if (deleteForEveryone) {
-        set({ messages: get().messages.map((m) =>
-          m._id === messageId ? { ...m, isDeletedForAll: true, text: null, image: null } : m
-        )});
+        set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, isDeletedForAll: true, text: null, image: null, audio: null } : m) });
       } else {
         set({ messages: get().messages.filter((m) => m._id !== messageId) });
       }
-    } catch (e) { toast.error(e.response?.data?.message || "Could not delete message"); }
+    } catch (e) { toast.error("Could not delete"); }
+  },
+
+  toggleStarMessage: async (messageId) => {
+    try {
+      const res = await axiosInstance.put(`/messages/star/${messageId}`);
+      set({ messages: get().messages.map((m) =>
+        m._id === messageId ? { ...m, _starred: res.data.starred } : m
+      )});
+      toast(res.data.starred ? "⭐ Message starred" : "Unstarred", { duration: 1500 });
+    } catch { toast.error("Could not star message"); }
+  },
+
+  togglePinMessage: async (messageId) => {
+    try {
+      const res = await axiosInstance.put(`/messages/pin/${messageId}`);
+      const msgs = get().messages.map((m) => m._id === messageId ? { ...m, isPinned: res.data.isPinned } : m);
+      set({ messages: msgs, pinnedMessage: res.data.isPinned ? msgs.find((m) => m._id === messageId) : null });
+      toast(res.data.isPinned ? "📌 Message pinned" : "Unpinned", { duration: 1500 });
+    } catch { toast.error("Could not pin message"); }
   },
 
   emitTyping: () => {
@@ -126,6 +175,7 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
     const socket = useAuthStore.getState().socket;
+
     socket.on("newMessage", (msg) => {
       if (msg.senderId !== selectedUser._id) {
         set({ unreadCounts: { ...get().unreadCounts, [msg.senderId]: (get().unreadCounts[msg.senderId] || 0) + 1 } });
@@ -135,27 +185,40 @@ export const useChatStore = create((set, get) => ({
       if (isSoundEnabled) { const s = new Audio("/sounds/notification.mp3"); s.currentTime = 0; s.play().catch(() => {}); }
       get().markMessagesAsRead(msg.senderId);
     });
+
     socket.on("messagesRead", ({ by }) => {
       if (by !== selectedUser._id) return;
       set({ messages: get().messages.map((m) => m.receiverId === by && !m.isRead ? { ...m, isRead: true } : m) });
     });
+
     socket.on("messageReaction", ({ messageId, reactions }) => {
       set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, reactions } : m) });
     });
+
     socket.on("messageDeleted", ({ messageId, deletedForAll }) => {
       if (deletedForAll) {
-        set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, isDeletedForAll: true, text: null, image: null } : m) });
+        set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, isDeletedForAll: true, text: null, image: null, audio: null } : m) });
       } else {
         set({ messages: get().messages.filter((m) => m._id !== messageId) });
       }
     });
+
+    socket.on("messagePinned", ({ messageId, isPinned }) => {
+      const msgs = get().messages.map((m) => m._id === messageId ? { ...m, isPinned } : m);
+      set({ messages: msgs, pinnedMessage: isPinned ? msgs.find((m) => m._id === messageId) : null });
+    });
+
+    socket.on("userLastSeen", ({ userId, lastSeen }) => {
+      set({ lastSeenMap: { ...get().lastSeenMap, [userId]: lastSeen } });
+    });
+
     socket.on("userTyping",        ({ from }) => { if (from !== selectedUser._id) return; set({ typingUsers: { ...get().typingUsers, [from]: true } }); });
     socket.on("userStoppedTyping", ({ from }) => { const n = { ...get().typingUsers }; delete n[from]; set({ typingUsers: n }); });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
-    ["newMessage","messagesRead","messageReaction","messageDeleted","userTyping","userStoppedTyping"]
+    ["newMessage","messagesRead","messageReaction","messageDeleted","messagePinned","userLastSeen","userTyping","userStoppedTyping"]
       .forEach((ev) => socket?.off(ev));
   },
 }));
