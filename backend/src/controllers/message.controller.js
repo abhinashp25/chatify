@@ -2,6 +2,7 @@ import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import { extractFirstUrl, fetchLinkPreview } from "../lib/linkPreview.js";
 
 export const getAllContacts = async (req, res) => {
   try {
@@ -41,12 +42,12 @@ export const getChatPartners = async (req, res) => {
       }
     }
 
-    // Get user's archived list to mark/exclude
-    const currentUser = await User.findById(myId).select("archivedChats");
+    const currentUser = await User.findById(myId).select("archivedChats disappearTimers");
     const archivedSet = new Set((currentUser.archivedChats || []).map(String));
 
     const enriched = partners.map((p) => {
       const lastMsg = partnerLastMsg[p._id.toString()];
+      const disappearSeconds = currentUser.disappearTimers?.get(p._id.toString()) || 0;
       return {
         ...p.toObject(),
         lastMessage: {
@@ -59,8 +60,9 @@ export const getChatPartners = async (req, res) => {
           isRead:    lastMsg.isRead,
           isDeleted: lastMsg.isDeletedForAll,
         },
-        unreadCount: unreadCounts[p._id.toString()] || 0,
-        isArchived: archivedSet.has(p._id.toString()),
+        unreadCount:      unreadCounts[p._id.toString()] || 0,
+        isArchived:       archivedSet.has(p._id.toString()),
+        disappearSeconds, // let frontend show the timer icon in sidebar
       };
     });
 
@@ -110,12 +112,35 @@ export const sendMessage = async (req, res) => {
     if (image) { const r = await cloudinary.uploader.upload(image); imageUrl = r.secure_url; }
     if (audio) { const r = await cloudinary.uploader.upload(audio, { resource_type: "auto" }); audioUrl = r.secure_url; }
 
+    const senderUser = await User.findById(senderId).select("disappearTimers");
+    const disappearSeconds = senderUser.disappearTimers?.get(receiverId.toString()) || 0;
+    let expiresAt = null;
+    if (disappearSeconds > 0) {
+      expiresAt = new Date(Date.now() + disappearSeconds * 1000);
+    }
+
     const newMessage = new Message({
       senderId, receiverId, text, image: imageUrl, audio: audioUrl,
       replyTo: replyTo || undefined,
       isForwarded: isForwarded || false,
+      expiresAt,
     });
     await newMessage.save();
+
+    const urlInText = text ? extractFirstUrl(text) : null;
+    if (urlInText) {
+      fetchLinkPreview(urlInText).then(async (preview) => {
+        if (!preview) return;
+        await Message.findByIdAndUpdate(newMessage._id, { linkPreview: preview });
+        const updatedMsg = await Message.findById(newMessage._id).lean();
+
+        // Push preview update to both sender and receiver
+        const receiverSocket = getReceiverSocketId(receiverId.toString());
+        const senderSocket   = getReceiverSocketId(senderId.toString());
+        if (receiverSocket) io.to(receiverSocket).emit("messageLinkPreview", updatedMsg);
+        if (senderSocket)   io.to(senderSocket).emit("messageLinkPreview", updatedMsg);
+      }).catch(() => {}); // silently ignore preview failures
+    }
 
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", newMessage);
@@ -273,7 +298,6 @@ export const clearChat = async (req, res) => {
   try {
     const myId = req.user._id;
     const { userId } = req.params;
-    // Add current user to deletedFor for all messages in this conversation
     await Message.updateMany(
       {
         $or: [

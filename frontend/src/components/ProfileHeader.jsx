@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   LogOutIcon, Volume2Icon, VolumeOffIcon, MoreVerticalIcon,
   BellIcon, BellOffIcon, UserCircleIcon, InfoIcon, EditIcon,
-  ArchiveIcon, SparklesIcon, SettingsIcon,
+  ArchiveIcon, SparklesIcon, SettingsIcon, SearchIcon,
 } from "lucide-react";
 
 function AIIcon({ className }) {
@@ -15,6 +15,7 @@ function AIIcon({ className }) {
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore }  from "../store/useChatStore";
 import toast from "react-hot-toast";
+import GlobalSearch from "./GlobalSearch";
 
 const clickSound = new Audio("/sounds/mouse-click.mp3");
 
@@ -22,6 +23,7 @@ export default function ProfileHeader({ onShowAI, onShowArchived, onShowStarred,
   const { logout, authUser, updateProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound }     = useChatStore();
   const [selectedImg, setSelectedImg]       = useState(null);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [menuOpen, setMenuOpen]             = useState(false);
   const [notifsEnabled, setNotifsEnabled]   = useState(
     typeof Notification !== "undefined" && Notification.permission === "granted"
@@ -146,6 +148,11 @@ export default function ProfileHeader({ onShowAI, onShowArchived, onShowStarred,
           </div>
         )}
       </div>
+
+      {/* Global search overlay */}
+      {showGlobalSearch && (
+        <GlobalSearch onClose={() => setShowGlobalSearch(false)} />
+      )}
     </div>
   );
 }

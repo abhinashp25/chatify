@@ -9,6 +9,7 @@ import MessageTicks      from "./MessageTicks";
 import SmartReplies      from "./SmartReplies";
 import ReplyBar          from "./ReplyBar";
 import ForwardModal      from "./ForwardModal";
+import LinkPreviewCard   from "./LinkPreviewCard";
 
 const REACTION_EMOJIS = ["👍","❤️","😂","😮","😢","🔥"];
 
@@ -18,18 +19,18 @@ export default function ChatContainer() {
     messages, isMessagesLoading, subscribeToMessages, unsubscribeFromMessages,
     toggleReaction, deleteMessage, searchQuery,
     setReplyingTo, toggleStarMessage, togglePinMessage, pinnedMessage,
-    toggleFavourite, isFavourite,
   } = useChatStore();
   const { authUser } = useAuthStore();
 
-  const bottomRef      = useRef(null);
-  const [ctx, setCtx]  = useState(null);
+  const bottomRef    = useRef(null);
+  const containerRef = useRef(null);
+  const holdTimer    = useRef(null);
+
+  const [ctx, setCtx]         = useState(null);
   const [hoveredMsg, setHovered] = useState(null);
   const [forwardMsg, setForwardMsg] = useState(null);
   const [currentInput, setCurrentInput] = useState("");
   const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const holdTimer = useRef(null);
-  const containerRef = useRef(null);
 
   useEffect(() => {
     getMessagesByUserId(selectedUser._id);
@@ -42,8 +43,7 @@ export default function ChatContainer() {
     const el = containerRef.current;
     if (!el) return;
     const onScroll = () => {
-      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setShowScrollBtn(distFromBottom > 300);
+      setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 300);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
@@ -81,6 +81,19 @@ export default function ChatContainer() {
     setCtx(null);
   };
 
+  // Disappear label for a single message bubble
+  const disappearLabel = (msg) => {
+    if (!msg.expiresAt) return null;
+    const diff = new Date(msg.expiresAt) - new Date();
+    if (diff <= 0) return null;
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (d > 1) return `${d}d`;
+    if (h > 0) return `${h}h`;
+    const m = Math.floor(diff / 60000);
+    return `${m}m`;
+  };
+
   return (
     <div className="flex flex-col h-full" onClick={() => setCtx(null)}>
       <ChatHeader />
@@ -88,15 +101,15 @@ export default function ChatContainer() {
       {/* Pinned message banner */}
       {pinnedMessage && !pinnedMessage.isDeletedForAll && (
         <div className="flex items-center gap-2.5 px-4 py-2 cursor-pointer flex-shrink-0"
-          style={{ background: 'rgba(79,209,197,0.08)', borderBottom: '1px solid rgba(79,209,197,0.15)' }}
+          style={{ background: "rgba(79,209,197,0.08)", borderBottom: "1px solid rgba(79,209,197,0.15)" }}
           onClick={() => {
             const el = document.getElementById(`msg-${pinnedMessage._id}`);
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}>
-          <div className="w-0.5 h-7 rounded-full flex-shrink-0" style={{ background: '#4fd1c5' }} />
+          <div className="w-0.5 h-7 rounded-full flex-shrink-0" style={{ background: "#4fd1c5" }} />
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#4fd1c5' }}>📌 Pinned Message</p>
-            <p className="text-[12px] truncate" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#4fd1c5" }}>📌 Pinned Message</p>
+            <p className="text-[12px] truncate" style={{ color: "var(--text-secondary)" }}>
               {pinnedMessage.image ? "📷 Photo" : pinnedMessage.audio ? "🎤 Voice" : pinnedMessage.text}
             </p>
           </div>
@@ -104,12 +117,12 @@ export default function ChatContainer() {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 chat-bg">
+      <div ref={containerRef} className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 chat-bg">
         {isMessagesLoading ? <MessagesLoadingSkeleton /> :
          visible.length === 0 && searchQuery ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <div className="text-5xl opacity-30">🔍</div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No results for "{searchQuery}"</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>No results for "{searchQuery}"</p>
           </div>
         ) : visible.length === 0 ? (
           <NoChatHistoryPlaceholder name={selectedUser.fullName} />
@@ -121,6 +134,7 @@ export default function ChatContainer() {
               const grouped    = groupReactions(msg.reactions);
               const hasReacts  = Object.keys(grouped).length > 0;
               const isHovered  = hoveredMsg === msg._id;
+              const timeLeft   = disappearLabel(msg);
 
               const showDate = idx === 0 || !sameDay(
                 new Date(visible[idx - 1]?.createdAt), new Date(msg.createdAt)
@@ -132,7 +146,11 @@ export default function ChatContainer() {
 
                   <div
                     className={`flex ${isMine ? "justify-end" : "justify-start"} mb-0.5`}
-                    onTouchStart={() => { holdTimer.current = setTimeout(() => { setCtx({ msgId: msg._id, isMine, touch: true, x: 100, y: 300 }); }, 500); }}
+                    onTouchStart={() => {
+                      holdTimer.current = setTimeout(() => {
+                        setCtx({ msgId: msg._id, isMine, touch: true, x: 100, y: 300 });
+                      }, 500);
+                    }}
                     onTouchEnd={() => clearTimeout(holdTimer.current)}
                   >
                     <div className="relative" style={{ maxWidth: "min(76%, 520px)" }}
@@ -143,7 +161,7 @@ export default function ChatContainer() {
                       {!msg.isDeletedForAll && !msg.isOptimistic && isHovered && (
                         <div
                           className={`absolute z-30 -top-9 ${isMine ? "right-0" : "left-0"} flex items-center gap-0.5 px-2 py-1.5 rounded-full shadow-2xl`}
-                          style={{ background: 'var(--bg-panel)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                          style={{ background: "var(--bg-panel)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
                           onMouseEnter={() => setHovered(msg._id)}
                           onMouseLeave={() => setHovered(null)}
                         >
@@ -151,9 +169,9 @@ export default function ChatContainer() {
                             <button key={emoji}
                               onClick={(e) => { e.stopPropagation(); toggleReaction(msg._id, emoji); setHovered(null); }}
                               className="text-[18px] leading-none p-0.5 rounded-full transition-transform duration-100"
-                              style={{ background: myReaction === emoji ? 'rgba(79,209,197,0.25)' : 'transparent' }}
-                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.35)'}
-                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              style={{ background: myReaction === emoji ? "rgba(79,209,197,0.25)" : "transparent" }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.35)"}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                             >{emoji}</button>
                           ))}
                         </div>
@@ -178,8 +196,8 @@ export default function ChatContainer() {
                         {/* Reply quote */}
                         {msg.replyTo?.senderName && !msg.isDeletedForAll && (
                           <div className="mb-2 px-2.5 py-1.5 rounded-lg"
-                            style={{ background: 'rgba(0,0,0,0.2)', borderLeft: '2px solid rgba(79,209,197,0.6)' }}>
-                            <p className="text-[10px] font-bold mb-0.5" style={{ color: '#4fd1c5' }}>
+                            style={{ background: "rgba(0,0,0,0.2)", borderLeft: "2px solid rgba(79,209,197,0.6)" }}>
+                            <p className="text-[10px] font-bold mb-0.5" style={{ color: "#4fd1c5" }}>
                               {msg.replyTo.senderName}
                             </p>
                             {msg.replyTo.image && <p className="text-[11px] opacity-60">📷 Photo</p>}
@@ -201,15 +219,28 @@ export default function ChatContainer() {
                                 {searchQuery ? highlightMatch(msg.text, searchQuery) : msg.text}
                               </p>
                             )}
+                            {/* ── Link Preview Card ── */}
+                            {msg.linkPreview?.title && (
+                              <LinkPreviewCard preview={msg.linkPreview} isMine={isMine} />
+                            )}
                           </>
                         )}
 
-                        {/* Star indicator */}
                         {msg._starred && <span className="text-[10px] absolute -top-2 -right-1">⭐</span>}
 
-                        {/* Time + ticks */}
+                        {/* Time + ticks + disappear timer */}
                         <div className={`flex items-center justify-end gap-1 mt-1 ${isMine ? "opacity-50" : "opacity-40"}`}>
                           {msg.isPinned && <span className="text-[9px]">📌</span>}
+                          {/* Disappear countdown */}
+                          {timeLeft && (
+                            <span className="text-[9px] flex items-center gap-0.5">
+                              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                              </svg>
+                              {timeLeft}
+                            </span>
+                          )}
                           <span className="text-[10px]">
                             {new Date(msg.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
                           </span>
@@ -225,9 +256,9 @@ export default function ChatContainer() {
                               onClick={(e) => { e.stopPropagation(); toggleReaction(msg._id, emoji); }}
                               className="text-[12px] px-2 py-0.5 rounded-full border transition-all"
                               style={{
-                                background: myReaction === emoji ? 'rgba(79,209,197,0.18)' : 'rgba(26,34,53,0.85)',
-                                borderColor: myReaction === emoji ? 'rgba(79,209,197,0.4)' : 'rgba(255,255,255,0.08)',
-                                color: 'var(--text-primary)',
+                                background: myReaction === emoji ? "rgba(79,209,197,0.18)" : "rgba(26,34,53,0.85)",
+                                borderColor: myReaction === emoji ? "rgba(79,209,197,0.4)" : "rgba(255,255,255,0.08)",
+                                color: "var(--text-primary)",
                               }}>
                               {emoji}{count > 1 ? ` ${count}` : ""}
                             </button>
@@ -244,14 +275,26 @@ export default function ChatContainer() {
         )}
       </div>
 
+      {/* Scroll-to-bottom button */}
+      {showScrollBtn && (
+        <button
+          onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+          className="absolute bottom-24 right-5 w-10 h-10 rounded-full flex items-center justify-center shadow-2xl z-20 transition-all hover:scale-110 active:scale-95"
+          style={{ background: "var(--accent)", boxShadow: "0 4px 18px rgba(79,209,197,0.4)" }}>
+          <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+      )}
+
       {/* Context menu */}
       {ctx && (
         <div className="fixed z-50 rounded-xl overflow-hidden shadow-2xl py-1"
           style={{
-            top: Math.min(ctx.y, window.innerHeight - 230),
-            left: Math.min(ctx.x, window.innerWidth - 220),
-            background: 'var(--bg-panel)', border: '1px solid rgba(255,255,255,0.1)',
-            minWidth: 200, boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
+            top: Math.min(ctx.y, window.innerHeight - 250),
+            left: Math.min(ctx.x, window.innerWidth - 225),
+            background: "var(--bg-panel)", border: "1px solid rgba(255,255,255,0.1)",
+            minWidth: 205, boxShadow: "0 24px 64px rgba(0,0,0,0.7)",
           }}
           onClick={(e) => e.stopPropagation()}>
           <CtxItem emoji="↩️" label="Reply"
@@ -262,7 +305,7 @@ export default function ChatContainer() {
             onClick={() => { toggleStarMessage(ctx.msgId); setCtx(null); }} />
           <CtxItem emoji="📌" label={messages.find(m=>m._id===ctx.msgId)?.isPinned ? "Unpin" : "Pin message"}
             onClick={() => { togglePinMessage(ctx.msgId); setCtx(null); }} />
-          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+          <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
           <CtxItem emoji="🗑️" label="Delete for me"
             onClick={() => { deleteMessage(ctx.msgId, false); setCtx(null); }} />
           {ctx.isMine && (
@@ -294,7 +337,7 @@ function CtxItem({ emoji, label, onClick, danger }) {
   return (
     <button onClick={onClick}
       className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-3 transition-colors hover:bg-white/5"
-      style={{ color: danger ? '#fc8181' : 'var(--text-primary)' }}>
+      style={{ color: danger ? "#fc8181" : "var(--text-primary)" }}>
       <span className="text-base w-5 text-center">{emoji}</span>
       {label}
     </button>
@@ -309,7 +352,7 @@ function DatePill({ date }) {
   return (
     <div className="flex justify-center my-4">
       <span className="text-[11px] px-4 py-1.5 rounded-full select-none"
-        style={{ background: 'rgba(26,34,53,0.85)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+        style={{ background: "rgba(26,34,53,0.85)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
         {label}
       </span>
     </div>
@@ -326,25 +369,19 @@ function highlightMatch(text, query) {
   return (<>{text.slice(0, idx)}<mark className="bg-yellow-400/40 text-inherit rounded px-0.5">{text.slice(idx, idx + query.length)}</mark>{text.slice(idx + query.length)}</>);
 }
 
-
-// ── WhatsApp-style Image Bubble — tap to view, arrow to download ──────────────
 function ImageBubble({ src, isMine }) {
   const [opened, setOpened] = useState(false);
   const [lightbox, setLightbox] = useState(false);
 
   if (!opened) {
     return (
-      <div
-        className="relative rounded-xl overflow-hidden mb-1.5 cursor-pointer group"
-        style={{ width: 200, height: 180, background: 'rgba(0,0,0,0.3)' }}
-        onClick={() => setOpened(true)}
-      >
-        {/* Blurred preview */}
-        <img src={src} alt="img" className="w-full h-full object-cover" style={{ filter: 'blur(12px)', transform: 'scale(1.1)' }} />
-        {/* Download icon overlay */}
+      <div className="relative rounded-xl overflow-hidden mb-1.5 cursor-pointer group"
+        style={{ width: 200, height: 180, background: "rgba(0,0,0,0.3)" }}
+        onClick={() => setOpened(true)}>
+        <img src={src} alt="img" className="w-full h-full object-cover" style={{ filter: "blur(12px)", transform: "scale(1.1)" }} />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
           <div className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(0,0,0,0.55)', border: '2px solid rgba(255,255,255,0.3)' }}>
+            style={{ background: "rgba(0,0,0,0.55)", border: "2px solid rgba(255,255,255,0.3)" }}>
             <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M12 2v12m0 0l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
             </svg>
@@ -354,42 +391,30 @@ function ImageBubble({ src, isMine }) {
       </div>
     );
   }
-
   return (
     <>
       <div className="relative rounded-xl overflow-hidden mb-1.5 cursor-zoom-in group" onClick={() => setLightbox(true)}>
         <img src={src} alt="img" className="rounded-xl max-h-[260px] w-full object-cover" />
-        {/* Download button top-right */}
-        <a
-          href={src} download target="_blank" rel="noreferrer"
+        <a href={src} download target="_blank" rel="noreferrer"
           className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: 'rgba(0,0,0,0.6)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+          style={{ background: "rgba(0,0,0,0.6)" }} onClick={(e) => e.stopPropagation()}>
           <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 2v12m0 0l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
           </svg>
         </a>
       </div>
-
-      {/* Lightbox */}
       {lightbox && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.92)' }}
-          onClick={() => setLightbox(false)}>
+          style={{ background: "rgba(0,0,0,0.92)" }} onClick={() => setLightbox(false)}>
           <img src={src} alt="full" className="max-w-[90vw] max-h-[88vh] rounded-2xl object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
           <div className="absolute top-4 right-4 flex gap-2">
             <a href={src} download target="_blank" rel="noreferrer"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-              style={{ background: 'rgba(255,255,255,0.12)' }}
-              onClick={(e) => e.stopPropagation()}>
+              className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }} onClick={(e) => e.stopPropagation()}>
               <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2v12m0 0l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
               </svg>
             </a>
-            <button onClick={() => setLightbox(false)}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.12)' }}>
+            <button onClick={() => setLightbox(false)} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}>
               <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -401,7 +426,6 @@ function ImageBubble({ src, isMine }) {
   );
 }
 
-// ── WhatsApp-style Audio Bubble — press play arrow to load ────────────────────
 function AudioBubble({ src, isMine }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -416,48 +440,37 @@ function AudioBubble({ src, isMine }) {
 
   const fmtTime = (s) => {
     if (!s || isNaN(s)) return "0:00";
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, "0")}`;
+    return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
   };
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
-
-  // Fake waveform bars
   const BARS = [3,5,8,6,9,4,7,10,6,8,5,4,9,7,6,8,5,3,7,9,4,6,8,5,7,9,6,4,8,6];
 
   return (
     <div className="flex items-center gap-2.5 mb-1" style={{ minWidth: 220, maxWidth: 280 }}>
-      {/* Profile pic */}
       <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
-        style={{ background: isMine ? 'rgba(255,255,255,0.2)' : 'rgba(79,209,197,0.2)' }}>
+        style={{ background: isMine ? "rgba(255,255,255,0.2)" : "rgba(79,209,197,0.2)" }}>
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full p-2"
-          style={{ color: isMine ? 'rgba(255,255,255,0.7)' : '#4fd1c5' }}>
+          style={{ color: isMine ? "rgba(255,255,255,0.7)" : "#4fd1c5" }}>
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
           <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
         </svg>
       </div>
-
       <div className="flex-1">
-        {/* Waveform bars + play btn row */}
         <div className="flex items-center gap-1.5">
           <button onClick={toggle}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
-            style={{ background: isMine ? 'rgba(255,255,255,0.25)' : 'rgba(79,209,197,0.25)' }}>
+            style={{ background: isMine ? "rgba(255,255,255,0.25)" : "rgba(79,209,197,0.25)" }}>
             {playing ? (
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"
-                style={{ color: isMine ? 'white' : '#4fd1c5' }}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" style={{ color: isMine ? "white" : "#4fd1c5" }}>
                 <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
               </svg>
             ) : (
-              <svg className="w-3.5 h-3.5 ml-0.5" viewBox="0 0 24 24" fill="currentColor"
-                style={{ color: isMine ? 'white' : '#4fd1c5' }}>
+              <svg className="w-3.5 h-3.5 ml-0.5" viewBox="0 0 24 24" fill="currentColor" style={{ color: isMine ? "white" : "#4fd1c5" }}>
                 <polygon points="5,3 19,12 5,21"/>
               </svg>
             )}
           </button>
-
-          {/* Animated waveform */}
           <div className="flex items-center gap-[2px] flex-1 cursor-pointer h-8"
             onClick={(e) => {
               if (!audioRef.current || !duration) return;
@@ -470,36 +483,25 @@ function AudioBubble({ src, isMine }) {
               const barPct = (i / BARS.length) * 100;
               const active = barPct <= pct;
               return (
-                <div key={i}
-                  className="rounded-full flex-1 transition-all"
+                <div key={i} className="rounded-full flex-1 transition-all"
                   style={{
                     height: `${h * 2.5}px`,
                     background: active
-                      ? (isMine ? 'rgba(255,255,255,0.9)' : '#4fd1c5')
-                      : (isMine ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)'),
-                    animation: playing ? `wave-${(i % 4) + 1} 0.6s ease-in-out infinite` : 'none',
-                  }}
-                />
+                      ? (isMine ? "rgba(255,255,255,0.9)" : "#4fd1c5")
+                      : (isMine ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.2)"),
+                    animation: playing ? `wave-${(i % 4) + 1} 0.6s ease-in-out infinite` : "none",
+                  }} />
               );
             })}
           </div>
         </div>
-
-        {/* Time */}
-        <p className="text-[10px] mt-0.5 pl-[38px]"
-          style={{ color: isMine ? 'rgba(255,255,255,0.5)' : 'var(--text-muted)' }}>
+        <p className="text-[10px] mt-0.5 pl-[38px]" style={{ color: isMine ? "rgba(255,255,255,0.5)" : "var(--text-muted)" }}>
           {fmtTime(playing || progress > 0 ? progress : duration)}
         </p>
       </div>
-
-      {/* Always-mounted audio element */}
       <audio ref={audioRef} src={src} preload="metadata"
-        onLoadedMetadata={() => {
-          if (audioRef.current) setDuration(audioRef.current.duration);
-        }}
-        onTimeUpdate={() => {
-          if (audioRef.current) setProgress(audioRef.current.currentTime);
-        }}
+        onLoadedMetadata={() => { if (audioRef.current) setDuration(audioRef.current.duration); }}
+        onTimeUpdate={() => { if (audioRef.current) setProgress(audioRef.current.currentTime); }}
         onEnded={() => { setPlaying(false); setProgress(0); }}
         className="hidden" />
     </div>

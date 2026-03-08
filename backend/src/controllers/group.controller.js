@@ -20,18 +20,13 @@ export const createGroup = async (req, res) => {
     const allMembers = [...new Set([creatorId.toString(), ...(memberIds || [])])];
 
     const group = new Group({
-      name: name.trim(),
-      description: description || "",
-      groupPic: picUrl,
-      createdBy: creatorId,
-      admins: [creatorId],
-      members: allMembers,
+      name: name.trim(), description: description || "",
+      groupPic: picUrl, createdBy: creatorId,
+      admins: [creatorId], members: allMembers,
     });
-
     await group.save();
     const populated = await Group.findById(group._id).populate("members", "-password");
 
-    // Notify all members via socket
     allMembers.forEach((memberId) => {
       io.to(`user:${memberId}`).emit("groupCreated", populated);
     });
@@ -84,16 +79,14 @@ export const sendGroupMessage = async (req, res) => {
     if (!group) return res.status(403).json({ message: "Not a member." });
 
     let imageUrl, audioUrl;
-    if (image) {
-      const r = await cloudinary.uploader.upload(image);
-      imageUrl = r.secure_url;
-    }
-    if (audio) {
-      const r = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
-      audioUrl = r.secure_url;
-    }
+    if (image) { const r = await cloudinary.uploader.upload(image); imageUrl = r.secure_url; }
+    if (audio) { const r = await cloudinary.uploader.upload(audio, { resource_type: "auto" }); audioUrl = r.secure_url; }
 
-    const msg = new GroupMessage({ groupId, senderId, text, image: imageUrl, audio: audioUrl });
+    const msg = new GroupMessage({
+      groupId, senderId, text, image: imageUrl, audio: audioUrl,
+      // Sender has automatically "read" their own message
+      readBy: [{ userId: senderId, readAt: new Date() }],
+    });
     await msg.save();
     await msg.populate("senderId", "fullName profilePic");
 
@@ -102,12 +95,64 @@ export const sendGroupMessage = async (req, res) => {
       lastMessageAt: new Date(),
     });
 
-    // Emit to group room
     io.to(`group:${groupId}`).emit("newGroupMessage", msg);
-
     res.status(201).json(msg);
   } catch (e) {
     console.error("sendGroupMessage error:", e);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const markGroupMessagesRead = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user._id;
+
+    const group = await Group.findOne({ _id: groupId, members: userId });
+    if (!group) return res.status(403).json({ message: "Not a member." });
+
+    await GroupMessage.updateMany(
+      {
+        groupId,
+        isDeletedForAll: false,
+        "readBy.userId": { $ne: userId },
+      },
+      {
+        $push: { readBy: { userId, readAt: new Date() } },
+      }
+    );
+
+    const memberCount = group.members.length;
+
+    io.to(`group:${groupId}`).emit("groupMessagesRead", {
+      groupId,
+      byUserId: userId.toString(),
+      memberCount,
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getMessageReadBy = async (req, res) => {
+  try {
+    const { groupId, messageId } = req.params;
+    const userId = req.user._id;
+
+    const group = await Group.findOne({ _id: groupId, members: userId });
+    if (!group) return res.status(403).json({ message: "Not a member." });
+
+    const msg = await GroupMessage.findById(messageId)
+      .populate("readBy.userId", "fullName profilePic");
+    if (!msg) return res.status(404).json({ message: "Not found." });
+
+    res.json({
+      readBy: msg.readBy,
+      memberCount: group.members.length,
+    });
+  } catch (e) {
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -152,7 +197,6 @@ export const leaveGroup = async (req, res) => {
 
     group.members = group.members.filter((m) => !m.equals(userId));
     group.admins  = group.admins.filter((a) => !a.equals(userId));
-    // If no admins left, promote first member
     if (group.admins.length === 0 && group.members.length > 0) {
       group.admins.push(group.members[0]);
     }

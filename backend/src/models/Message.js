@@ -22,7 +22,7 @@ const messageSchema = new mongoose.Schema(
     },
     
     audio: {
-      type: String, // base64 or Cloudinary URL
+      type: String, 
     },
 
     replyTo: {
@@ -55,6 +55,18 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    linkPreview: {
+      url:         { type: String },
+      title:       { type: String },
+      description: { type: String },
+      image:       { type: String },
+      siteName:    { type: String },
+      favicon:     { type: String },
+    },
+
+    
+    expiresAt: { type: Date, default: null, index: { expireAfterSeconds: 0, sparse: true } },
 
   },
   { timestamps: true }

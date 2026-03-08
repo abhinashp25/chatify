@@ -17,11 +17,12 @@ export const useChatStore = create((set, get) => ({
   searchQuery:       "",
   sidebarSearch:     "",
   unreadCounts:      {},
-  replyingTo:        null,   // { messageId, text, senderName, image }
-  pendingInput:      null,   // set by SmartReplies to fill input
+  replyingTo:        null,
+  pendingInput:      null,
   starredMessages:   [],
-  lastSeenMap:       {},     // { userId: isoString }
-  pinnedMessage:     null,   // pinned message in current chat
+  lastSeenMap:       {},
+  pinnedMessage:     null,
+  disappearSeconds:  0,  
 
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -30,7 +31,7 @@ export const useChatStore = create((set, get) => ({
   setActiveTab:     (tab)  => set({ activeTab: tab }),
   setActiveFilter:  (f)    => set({ activeFilter: f }),
   setSelectedUser:  (user) => {
-    set({ selectedUser: user, replyingTo: null, pinnedMessage: null });
+    set({ selectedUser: user, replyingTo: null, pinnedMessage: null, disappearSeconds: 0 });
     if (user) set({ unreadCounts: { ...get().unreadCounts, [user._id]: 0 } });
   },
   setSearchQuery:   (q) => set({ searchQuery: q }),
@@ -39,6 +40,7 @@ export const useChatStore = create((set, get) => ({
   clearReply:       () => set({ replyingTo: null }),
   setPendingInput:  (text) => set({ pendingInput: text }),
   clearPendingInput:() => set({ pendingInput: null }),
+  setDisappearSeconds: (s) => set({ disappearSeconds: s }),
 
   clearChat: async (userId) => {
     try {
@@ -65,7 +67,6 @@ export const useChatStore = create((set, get) => ({
     set({ isUsersLoading: true });
     try {
       const res = await axiosInstance.get("/messages/chats");
-      // Seed unread counts from server response (only add, don't overwrite live counts)
       const serverUnread = {};
       res.data.forEach((c) => { if (c.unreadCount > 0) serverUnread[c._id] = c.unreadCount; });
       set({ chats: res.data, unreadCounts: { ...serverUnread, ...get().unreadCounts } });
@@ -78,9 +79,13 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
-      // Find pinned message
       const pinned = res.data.find((m) => m.isPinned && !m.isDeletedForAll);
       set({ pinnedMessage: pinned || null });
+
+      try {
+        const d = await axiosInstance.get(`/disappear/${userId}`);
+        set({ disappearSeconds: d.data.seconds || 0 });
+      } catch { set({ disappearSeconds: 0 }); }
     } catch (e) { toast.error(e.response?.data?.message || "Error"); }
     finally { set({ isMessagesLoading: false }); }
   },
@@ -90,10 +95,7 @@ export const useChatStore = create((set, get) => ({
     const { authUser } = useAuthStore.getState();
     const tempId = `temp-${Date.now()}`;
 
-    const payload = {
-      ...messageData,
-      replyTo: replyingTo || undefined,
-    };
+    const payload = { ...messageData, replyTo: replyingTo || undefined };
 
     const optimistic = {
       _id: tempId,
@@ -130,7 +132,7 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.put(`/messages/react/${messageId}`, { emoji });
       set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, reactions: res.data.reactions } : m) });
-    } catch (e) { toast.error("Could not react"); }
+    } catch { toast.error("Could not react"); }
   },
 
   deleteMessage: async (messageId, deleteForEveryone) => {
@@ -141,15 +143,13 @@ export const useChatStore = create((set, get) => ({
       } else {
         set({ messages: get().messages.filter((m) => m._id !== messageId) });
       }
-    } catch (e) { toast.error("Could not delete"); }
+    } catch { toast.error("Could not delete"); }
   },
 
   toggleStarMessage: async (messageId) => {
     try {
       const res = await axiosInstance.put(`/messages/star/${messageId}`);
-      set({ messages: get().messages.map((m) =>
-        m._id === messageId ? { ...m, _starred: res.data.starred } : m
-      )});
+      set({ messages: get().messages.map((m) => m._id === messageId ? { ...m, _starred: res.data.starred } : m) });
       toast(res.data.starred ? "⭐ Message starred" : "Unstarred", { duration: 1500 });
     } catch { toast.error("Could not star message"); }
   },
@@ -189,6 +189,40 @@ export const useChatStore = create((set, get) => ({
       get().markMessagesAsRead(msg.senderId);
     });
 
+    socket.on("messageLinkPreview", (updatedMsg) => {
+      set({
+        messages: get().messages.map((m) =>
+          m._id === updatedMsg._id ? { ...m, linkPreview: updatedMsg.linkPreview } : m
+        ),
+      });
+    });
+
+    socket.on("scheduledMessageSent", ({ message }) => {
+      const { selectedUser: su } = get();
+      if (!su) return;
+      const isThisChat =
+        (message.senderId === useAuthStore.getState().authUser._id &&
+         message.receiverId === su._id) ||
+        (message.receiverId === useAuthStore.getState().authUser._id &&
+         message.senderId === su._id);
+      if (isThisChat) {
+        set({ messages: [...get().messages, message] });
+      }
+      get().getMyChatPartners();
+      toast("📅 Scheduled message sent!", { duration: 2000 });
+    });
+
+    // Disappear timer changed by partner
+    socket.on("disappearTimerChanged", ({ byUserId, seconds }) => {
+      if (byUserId === selectedUser._id) {
+        // Partner changed timer — show a toast
+        const label = seconds === 0 ? "disabled disappearing messages"
+          : seconds === 86400 ? "set messages to disappear in 24 hours"
+          : `set a disappear timer`;
+        toast(`⏱ ${selectedUser.fullName} ${label}`, { duration: 3000 });
+      }
+    });
+
     socket.on("messagesRead", ({ by }) => {
       if (by !== selectedUser._id) return;
       set({ messages: get().messages.map((m) => m.receiverId === by && !m.isRead ? { ...m, isRead: true } : m) });
@@ -221,7 +255,10 @@ export const useChatStore = create((set, get) => ({
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
-    ["newMessage","messagesRead","messageReaction","messageDeleted","messagePinned","userLastSeen","userTyping","userStoppedTyping"]
-      .forEach((ev) => socket?.off(ev));
+    [
+      "newMessage","messageLinkPreview","scheduledMessageSent","disappearTimerChanged",
+      "messagesRead","messageReaction","messageDeleted","messagePinned",
+      "userLastSeen","userTyping","userStoppedTyping",
+    ].forEach((ev) => socket?.off(ev));
   },
 }));

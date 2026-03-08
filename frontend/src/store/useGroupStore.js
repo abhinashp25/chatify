@@ -9,7 +9,7 @@ export const useGroupStore = create((set, get) => ({
   groupMessages:    {},   // { groupId: [messages] }
   isGroupsLoading:  false,
   isMsgLoading:     false,
-  groupTypingUsers: {},   // { groupId: { userId: name } }
+  groupTypingUsers: {},
 
   setSelectedGroup: (group) => set({ selectedGroup: group }),
 
@@ -18,12 +18,10 @@ export const useGroupStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get("/groups");
       set({ groups: res.data });
-      // Join socket rooms
       const socket = useAuthStore.getState().socket;
       res.data.forEach((g) => socket?.emit("joinGroup", g._id));
-    } catch (e) {
-      toast.error("Could not load groups");
-    } finally { set({ isGroupsLoading: false }); }
+    } catch { toast.error("Could not load groups"); }
+    finally { set({ isGroupsLoading: false }); }
   },
 
   fetchGroupMessages: async (groupId) => {
@@ -31,9 +29,11 @@ export const useGroupStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/groups/${groupId}/messages`);
       set({ groupMessages: { ...get().groupMessages, [groupId]: res.data } });
-    } catch (e) {
-      toast.error("Could not load messages");
-    } finally { set({ isMsgLoading: false }); }
+
+      // Mark as read
+      axiosInstance.put(`/groups/${groupId}/read`).catch(() => {});
+    } catch { toast.error("Could not load messages"); }
+    finally { set({ isMsgLoading: false }); }
   },
 
   sendGroupMessage: async (groupId, data) => {
@@ -42,7 +42,7 @@ export const useGroupStore = create((set, get) => ({
     const optimistic = {
       _id: tempId, groupId, senderId: authUser, isOptimistic: true,
       text: data.text, image: data.image, audio: data.audio,
-      createdAt: new Date().toISOString(), reactions: [],
+      createdAt: new Date().toISOString(), reactions: [], readBy: [{ userId: authUser }],
     };
     const cur = get().groupMessages[groupId] || [];
     set({ groupMessages: { ...get().groupMessages, [groupId]: [...cur, optimistic] } });
@@ -53,7 +53,7 @@ export const useGroupStore = create((set, get) => ({
         m._id === tempId ? res.data : m
       );
       set({ groupMessages: { ...get().groupMessages, [groupId]: msgs } });
-    } catch (e) {
+    } catch {
       const msgs = (get().groupMessages[groupId] || []).filter((m) => m._id !== tempId);
       set({ groupMessages: { ...get().groupMessages, [groupId]: msgs } });
       toast.error("Could not send message");
@@ -79,14 +79,7 @@ export const useGroupStore = create((set, get) => ({
       if (get().selectedGroup?._id === groupId) set({ selectedGroup: null });
       useAuthStore.getState().socket?.emit("leaveGroup", groupId);
       toast.success("Left group");
-    } catch (e) { toast.error("Could not leave group"); }
-  },
-
-  emitGroupTyping: (groupId) => {
-    useAuthStore.getState().socket?.emit("groupTyping", { groupId });
-  },
-  emitGroupStopTyping: (groupId) => {
-    useAuthStore.getState().socket?.emit("groupStopTyping", { groupId });
+    } catch { toast.error("Could not leave group"); }
   },
 
   subscribeToGroupMessages: () => {
@@ -96,24 +89,49 @@ export const useGroupStore = create((set, get) => ({
     socket.on("newGroupMessage", (msg) => {
       const groupId = msg.groupId;
       const cur = get().groupMessages[groupId] || [];
-      // Skip if this message already exists (sent optimistically by this client)
-      const alreadyExists = cur.some((m) => m._id === msg._id);
-      if (alreadyExists) return;
+      // Dedup — prevent double from optimistic
+      if (cur.some((m) => m._id === msg._id)) return;
       set({ groupMessages: { ...get().groupMessages, [groupId]: [...cur, msg] } });
-      // Update group's last message in list
+
+      // Update group's lastMessage
       set({
         groups: get().groups.map((g) =>
           g._id === groupId
-            ? { ...g, lastMessage: msg.text || "📷", lastMessageAt: msg.createdAt }
+            ? { ...g, lastMessage: msg.text || (msg.image ? "📷 Image" : "🎤 Voice"), lastMessageAt: msg.createdAt }
             : g
         ),
       });
+
+      // Auto-mark as read if this group is currently open
+      if (get().selectedGroup?._id === groupId) {
+        axiosInstance.put(`/groups/${groupId}/read`).catch(() => {});
+      }
+    });
+
+    // Read receipt updates from other group members
+    socket.on("groupMessagesRead", ({ groupId, byUserId, memberCount }) => {
+      const msgs = get().groupMessages[groupId];
+      if (!msgs) return;
+      // Update readBy on all messages (optimistic — add byUserId if not already there)
+      const updated = msgs.map((m) => {
+        const alreadyRead = m.readBy?.some((r) =>
+          (r.userId?._id || r.userId)?.toString() === byUserId
+        );
+        if (alreadyRead) return m;
+        return {
+          ...m,
+          readBy: [...(m.readBy || []), { userId: byUserId, readAt: new Date().toISOString() }],
+        };
+      });
+      set({ groupMessages: { ...get().groupMessages, [groupId]: updated } });
     });
 
     socket.on("groupCreated", (group) => {
-      const already = get().groups.find((g) => g._id === group._id);
-      if (!already) set({ groups: [group, ...get().groups] });
-      socket.emit("joinGroup", group._id);
+      const exists = get().groups.some((g) => g._id === group._id);
+      if (!exists) {
+        set({ groups: [group, ...get().groups] });
+        socket.emit("joinGroup", group._id);
+      }
     });
 
     socket.on("groupUpdated", (group) => {
@@ -122,20 +140,24 @@ export const useGroupStore = create((set, get) => ({
     });
 
     socket.on("groupUserTyping", ({ groupId, from, name }) => {
-      const cur = get().groupTypingUsers[groupId] || {};
-      set({ groupTypingUsers: { ...get().groupTypingUsers, [groupId]: { ...cur, [from]: name } } });
+      set({ groupTypingUsers: { ...get().groupTypingUsers, [groupId]: { userId: from, name } } });
+      setTimeout(() => {
+        const cur = get().groupTypingUsers;
+        if (cur[groupId]?.userId === from) {
+          const next = { ...cur }; delete next[groupId];
+          set({ groupTypingUsers: next });
+        }
+      }, 3000);
     });
-
-    socket.on("groupUserStoppedTyping", ({ groupId, from }) => {
-      const cur = { ...(get().groupTypingUsers[groupId] || {}) };
-      delete cur[from];
-      set({ groupTypingUsers: { ...get().groupTypingUsers, [groupId]: cur } });
+    socket.on("groupUserStoppedTyping", ({ groupId }) => {
+      const next = { ...get().groupTypingUsers }; delete next[groupId];
+      set({ groupTypingUsers: next });
     });
   },
 
   unsubscribeFromGroupMessages: () => {
     const socket = useAuthStore.getState().socket;
-    ["newGroupMessage","groupCreated","groupUpdated","groupUserTyping","groupUserStoppedTyping"]
+    ["newGroupMessage","groupMessagesRead","groupCreated","groupUpdated","groupUserTyping","groupUserStoppedTyping"]
       .forEach((ev) => socket?.off(ev));
   },
 }));

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useGroupStore } from "../store/useGroupStore";
+import { GroupReadBadge } from "./GroupReadReceipts";
 import { useAuthStore }  from "../store/useAuthStore";
 import {
   ArrowLeftIcon, UsersIcon, MoreVerticalIcon,
@@ -194,9 +195,19 @@ export default function GroupChatWindow({ group, onClose }) {
                         )}
                       </>
                     )}
-                    <p className="text-[10px] text-right mt-1 opacity-50">
-                      {new Date(msg.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                    <div className="flex items-center justify-end gap-1.5 mt-1">
+                       <span className="text-[10px] opacity-50">
+                         {new Date(msg.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                       </span>
+                       {isMine && !msg.isOptimistic && (
+                         <GroupReadBadge
+                           groupId={group._id}
+                           messageId={msg._id}
+                           memberCount={group.members?.length || 1}
+                           readBy={msg.readBy || []}
+                         />
+                       )}
+                     </div>
                   </div>
                 </div>
               </div>

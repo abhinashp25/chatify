@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema({
     status:     { type: String, default: "Hey there! I am using Chatify", maxlength: 139 },
     lastSeen:   { type: Date, default: Date.now },    
     archivedChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    disappearTimers: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
+
+    
 }, {timestamps: true}); 
 
 const User = mongoose.model("User", userSchema);

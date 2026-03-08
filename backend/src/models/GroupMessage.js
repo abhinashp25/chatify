@@ -6,7 +6,7 @@ const groupMessageSchema = new mongoose.Schema(
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User",  required: true },
     text:     { type: String, trim: true, maxlength: 2000 },
     image:    { type: String },
-    audio:    { type: String },  // base64 or Cloudinary URL
+    audio:    { type: String },  
     reactions: [
       {
         emoji:  { type: String, required: true },
@@ -15,6 +15,13 @@ const groupMessageSchema = new mongoose.Schema(
     ],
     deletedFor:    [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     isDeletedForAll: { type: Boolean, default: false },
+
+    readBy: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        readAt:  { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );
