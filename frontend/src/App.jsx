@@ -7,6 +7,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import { useSettingsStore } from "./store/useSettingsStore";
 import PageLoader  from './components/PageLoader';
 import { Toaster } from 'react-hot-toast';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser } = useAuthStore();
@@ -27,6 +28,7 @@ function App() {
           style: { background: '#1f2c34', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '14px' },
         }}
       />
+      <SpeedInsights />
     </div>
   );
 }
