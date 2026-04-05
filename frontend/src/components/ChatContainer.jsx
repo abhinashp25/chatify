@@ -111,7 +111,7 @@ export default function ChatContainer() {
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#4fd1c5" }}>📌 Pinned Message</p>
             <p className="text-[12px] truncate" style={{ color: "var(--text-secondary)" }}>
-              {pinnedMessage.image ? "📷 Photo" : pinnedMessage.audio ? "🎤 Voice" : pinnedMessage.text}
+              {pinnedMessage.document ? "📄 Document" : pinnedMessage.image ? "📷 Photo" : pinnedMessage.audio ? "🎤 Voice" : pinnedMessage.text}
             </p>
           </div>
         </div>
@@ -209,6 +209,7 @@ export default function ChatContainer() {
                             </p>
                             {msg.replyTo.image && <p className="text-[11px] opacity-60">📷 Photo</p>}
                             {msg.replyTo.audio && <p className="text-[11px] opacity-60">🎤 Voice message</p>}
+                            {msg.replyTo.document && <p className="text-[11px] opacity-60">📄 Document</p>}
                             {msg.replyTo.text && (
                               <p className="text-[12px] opacity-70 line-clamp-2">{msg.replyTo.text}</p>
                             )}
@@ -221,6 +222,7 @@ export default function ChatContainer() {
                           <>
                             {msg.image && <ImageBubble src={msg.image} isMine={isMine} />}
                             {msg.audio && <AudioBubble src={msg.audio} isMine={isMine} />}
+                            {msg.document && <DocumentBubble doc={msg.document} isMine={isMine} />}
                             {msg.text && (
                               <p className="text-[14px] leading-relaxed break-words whitespace-pre-wrap">
                                 {searchQuery ? highlightMatch(msg.text, searchQuery) : msg.text}
@@ -512,5 +514,41 @@ function AudioBubble({ src, isMine }) {
         onEnded={() => { setPlaying(false); setProgress(0); }}
         className="hidden" />
     </div>
+  );
+}
+
+function DocumentBubble({ doc, isMine }) {
+  return (
+    <a href={doc.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 mb-1.5 rounded-xl transition-all hover:opacity-90 active:scale-[0.98]" 
+       style={{ background: isMine ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)", maxWidth: 280, minWidth: 220 }}>
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: isMine ? "rgba(255,255,255,0.2)" : "rgba(79,209,197,0.2)" }}>
+        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-medium truncate text-white">{doc.filename || "Document"}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-[10px] uppercase font-bold" style={{ color: isMine ? "rgba(255,255,255,0.6)" : "var(--text-muted)" }}>
+            {(doc.filename || "").split('.').pop()}
+          </span>
+          <span className="text-[10px] uppercase" style={{ color: isMine ? "rgba(255,255,255,0.5)" : "var(--text-muted)" }}>•</span>
+          <span className="text-[10px]" style={{ color: isMine ? "rgba(255,255,255,0.5)" : "var(--text-muted)" }}>
+            {(doc.size / 1024).toFixed(1)} KB
+          </span>
+        </div>
+      </div>
+      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: isMine ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.05)" }}>
+        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </div>
+    </a>
   );
 }

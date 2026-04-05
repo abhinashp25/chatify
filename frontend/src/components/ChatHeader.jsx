@@ -95,7 +95,7 @@ export default function ChatHeader() {
 
   return (
     <>
-      <div className="flex-shrink-0" style={{ background: "var(--bg-header)", borderBottom: "1px solid var(--border)" }}>
+      <div className="flex-shrink-0" style={{ background: "#202c33", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-2 px-3 h-[64px] relative">
           <div className="absolute top-0 left-0 right-0 h-[2px]"
             style={{ background: "linear-gradient(90deg, #4fd1c5, #667eea)", opacity: 0.5 }} />

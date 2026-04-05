@@ -87,3 +87,36 @@ export function createWelcomeEmailTemplate(name, clientURL) {
   </html>
   `;
 }
+
+export function createOtpEmailTemplate(otp) {
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatify Verification Code</title>
+  </head>
+  <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:0 auto; padding:20px; background-color:#f0f4f8;">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #0f1621 0%, #1a2a3a 100%); padding:36px 30px; text-align:center; border-radius:16px 16px 0 0; position:relative; overflow:hidden;">
+      <h1 style="color:white; margin:0; font-size:24px; font-weight:700; letter-spacing:-0.5px;">Chatify Verification</h1>
+    </div>
+
+    <!-- Body -->
+    <div style="background:#ffffff; padding:36px 32px; border-radius:0 0 16px 16px; box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+      <p style="font-size:16px; color:#1a2a3a; margin:0 0 12px;">Here is your verification code. It expires in 5 minutes.</p>
+      
+      <div style="text-align:center; margin:32px 0;">
+        <span style="display:inline-block; font-size:32px; font-weight:bold; letter-spacing:8px; padding:12px 24px; background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; color:#0f1621;">
+          ${otp}
+        </span>
+      </div>
+
+      <p style="color:#8fa3b8; font-size:13px; margin:0 0 4px;">If you didn't request this code, you can safely ignore this email.</p>
+    </div>
+  </body>
+  </html>
+  `;
+}

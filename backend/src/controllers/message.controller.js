@@ -29,7 +29,19 @@ export const getChatPartners = async (req, res) => {
     }
 
     const partnerIds = Object.keys(partnerLastMsg);
-    if (!partnerIds.length) return res.json([]);
+    
+    // Fallback: If no chat history exists, fetch all global users to bootstrap the UI
+    if (!partnerIds.length) {
+      const allUsers = await User.find({ _id: { $ne: myId } }).select("-password");
+      const mapped = allUsers.map((p) => ({
+        ...p.toObject(),
+        lastMessage: null,
+        unreadCount: 0,
+        isArchived: false,
+        disappearSeconds: 0
+      }));
+      return res.json(mapped);
+    }
 
     const partners = await User.find({ _id: { $in: partnerIds } }).select("-password");
 
@@ -108,10 +120,14 @@ export const sendMessage = async (req, res) => {
     const receiverExists = await User.exists({ _id: receiverId });
     if (!receiverExists) return res.status(404).json({ message: "Receiver not found." });
 
-    let imageUrl, audioUrl;
+    let imageUrl, audioUrl, documentObj;
     if (image) { const r = await cloudinary.uploader.upload(image); imageUrl = r.secure_url; }
     if (audio) { const r = await cloudinary.uploader.upload(audio, { resource_type: "auto" }); audioUrl = r.secure_url; }
-
+    if (req.body.document) {
+      const r = await cloudinary.uploader.upload(req.body.document.data, { resource_type: "raw" });
+      documentObj = { url: r.secure_url, filename: req.body.document.filename, size: req.body.document.size };
+    }
+    
     const senderUser = await User.findById(senderId).select("disappearTimers");
     const disappearSeconds = senderUser.disappearTimers?.get(receiverId.toString()) || 0;
     let expiresAt = null;
@@ -120,7 +136,7 @@ export const sendMessage = async (req, res) => {
     }
 
     const newMessage = new Message({
-      senderId, receiverId, text, image: imageUrl, audio: audioUrl,
+      senderId, receiverId, text, image: imageUrl, audio: audioUrl, document: documentObj,
       replyTo: replyTo || undefined,
       isForwarded: isForwarded || false,
       expiresAt,

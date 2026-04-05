@@ -17,7 +17,6 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters long" });
     }
 
-    // Check if email is valid: regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Invalid email format" });
@@ -38,7 +37,6 @@ export const signup = async (req, res) => {
     });
 
     if (newUser) {
-      // Persist user first, then issue auth cookie
       const savedUser = await newUser.save();
       generateToken(savedUser._id, res);
 
@@ -46,7 +44,7 @@ export const signup = async (req, res) => {
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
-        profilePic: newUser.profilePic, // FIX: was profilePicture
+        profilePic: newUser.profilePic,
       });
 
       try {
@@ -87,7 +85,7 @@ export const login = async (req, res) => {
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
-      profilePic: user.profilePic, // FIX: was profilePicture
+      profilePic: user.profilePic,
     });
   } catch (error) {
     console.error("Error in login controller: ", error);

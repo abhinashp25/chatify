@@ -24,12 +24,21 @@ const messageSchema = new mongoose.Schema(
     audio: {
       type: String, 
     },
+    document: {
+      url: { type: String },
+      filename: { type: String },
+      size: { type: Number },
+    },
 
     replyTo: {
       messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
       text:      { type: String },        // snapshot of original text
       senderName:{ type: String },        // snapshot of original sender name
       image:     { type: String },        // snapshot if it was an image
+      document:  { 
+        filename: { type: String },
+        url: { type: String }
+      },
     },
     
     isForwarded: { type: Boolean, default: false },

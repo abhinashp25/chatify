@@ -15,6 +15,7 @@ export default function StatusTray() {
 
   // Group statuses by user
   const groupedStatuses = statuses.reduce((acc, status) => {
+    if (!status.userId || !status.userId._id) return acc;
     const userId = status.userId._id;
     if (!acc[userId]) acc[userId] = { user: status.userId, items: [] };
     acc[userId].items.push(status);

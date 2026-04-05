@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
+import { Edit, MoreVertical, Search } from "lucide-react";
+import toast from "react-hot-toast";
 
 function timeAgo(iso) {
   if (!iso) return "";
@@ -22,9 +24,10 @@ function timeAgo(iso) {
 export default function ChatsList({ onSelectUser }) {
   const {
     getMyChatPartners, chats, isUsersLoading, setSelectedUser,
-    selectedUser, unreadCounts, activeFilter, sidebarSearch,
+    selectedUser, unreadCounts, activeFilter, setActiveFilter, sidebarSearch, setSidebarSearch
   } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const [showMenu, setShowMenu] = useState(false);
 
   useEffect(() => { getMyChatPartners(); }, []);
 
@@ -57,8 +60,66 @@ export default function ChatsList({ onSelectUser }) {
     </div>
   );
 
+
   return (
-    <div>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 relative">
+        <h1 className="text-[22px] font-bold text-gray-200">Chats</h1>
+        <div className="flex items-center gap-3 text-gray-400 relative">
+          <button 
+            onClick={() => toast("Drafting new broadcast...", { icon: "✏️" })}
+            className="hover:bg-white/10 p-1.5 rounded-full transition-colors">
+            <Edit size={20} />
+          </button>
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="hover:bg-white/10 p-1.5 rounded-full transition-colors relative">
+            <MoreVertical size={20} />
+          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 top-10 w-48 py-2 rounded-lg shadow-xl border border-white/5 z-50 animate-fade-in"
+              style={{ background: "#233138" }}>
+              <button 
+                onClick={() => { setShowMenu(false); toast.success("Marked all as read"); }}
+                className="w-full text-left px-4 py-2 hover:bg-white/5 text-[14.5px] text-gray-200 transition-colors">
+                Mark all as read
+              </button>
+              <button 
+                onClick={() => { setShowMenu(false); toast("Settings opened"); }}
+                className="w-full text-left px-4 py-2 hover:bg-white/5 text-[14.5px] text-gray-200 transition-colors">
+                Select chats
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="px-4 mb-3">
+        <div className="relative flex items-center bg-[#202c33] rounded-lg overflow-hidden h-[36px]">
+          <div className="pl-4 pr-3 text-gray-400"><Search size={16} /></div>
+          <input 
+            type="text" 
+            placeholder="Search or start a new chat" 
+            value={sidebarSearch}
+            onChange={(e) => setSidebarSearch(e.target.value)}
+            className="w-full bg-transparent text-[13px] text-gray-200 placeholder-gray-400 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Pill Filters */}
+      <div className="flex items-center gap-2 px-4 mb-2 pb-2 overflow-x-auto no-scrollbar border-b border-[rgba(255,255,255,0.05)]">
+        <FilterPill label="All" active={activeFilter === "all" || !activeFilter} onClick={() => setActiveFilter("all")} />
+        <FilterPill label="Unread" badge={visible.filter(c => (unreadCounts[c._id] ?? c.unreadCount) > 0).length} active={activeFilter === "unread"} onClick={() => setActiveFilter("unread")} />
+        <FilterPill label="Favourites" active={activeFilter === "favourites"} onClick={() => setActiveFilter("favourites")} />
+        <FilterPill label="Groups" active={activeFilter === "groups"} onClick={() => setActiveFilter("groups")} />
+      </div>
+
+      {/* Chat Rows */}
+      <div className="flex-1 overflow-y-auto w-full">
       {visible.map((chat) => {
         const isOnline = onlineUsers.includes(chat._id);
         const isActive = selectedUser?._id === chat._id;
@@ -76,7 +137,7 @@ export default function ChatsList({ onSelectUser }) {
                 style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }} />
               {isOnline && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-                  style={{ background: '#48bb78', borderColor: 'var(--bg-secondary)' }} />
+                  style={{ background: '#00a884', borderColor: '#111b21' }} />
               )}
             </div>
 
@@ -88,7 +149,7 @@ export default function ChatsList({ onSelectUser }) {
                 </p>
                 {lastMsg && (
                   <span className="text-[11px] flex-shrink-0"
-                    style={{ color: unread > 0 ? '#4fd1c5' : 'var(--text-muted)' }}>
+                    style={{ color: unread > 0 ? '#00a884' : '#8696a0' }}>
                     {timeAgo(lastMsg.createdAt)}
                   </span>
                 )}
@@ -102,7 +163,7 @@ export default function ChatsList({ onSelectUser }) {
                   {lastMsg ? (
                     <>
                       {lastMsg.isMine && !lastMsg.isDeleted && (
-                        <span style={{ color: '#4fd1c5' }}>You: </span>
+                        <span style={{ color: '#8696a0' }}>You: </span>
                       )}
                       {lastMsg.text}
                     </>
@@ -118,7 +179,21 @@ export default function ChatsList({ onSelectUser }) {
           </div>
         );
       })}
+      </div>
     </div>
+  );
+}
+
+function FilterPill({ label, badge, active, onClick }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-colors flex flex-shrink-0 items-center justify-center gap-1.5
+        ${active ? "bg-[#00a884]/20 text-[#00a884]" : "bg-[#202c33] text-gray-400 hover:bg-[#202c33]/80"}`}
+    >
+      {label}
+      {badge > 0 && <span className="text-[11px] font-bold" style={{ color: active ? "inherit" : "#00a884" }}>{badge}</span>}
+    </button>
   );
 }
 

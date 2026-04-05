@@ -1,163 +1,145 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { MailIcon, LockIcon, LoaderIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { MailIcon, LockIcon, LoaderIcon, ArrowRightIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [showPw, setShowPw] = useState(false);
   const { login, isLoggingIn } = useAuthStore();
-  const handleSubmit = (e) => { e.preventDefault(); login(formData); };
-  const set = (k) => (e) => setFormData((p) => ({ ...p, [k]: e.target.value }));
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    login(formData);
+  };
+
+  const set = (key) => (e) => setFormData((prev) => ({ ...prev, [key]: e.target.value }));
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center relative overflow-hidden">
-      {/* Animated gradient background */}
-      <div className="absolute inset-0" style={{
-        background: 'linear-gradient(135deg, #0a0f1a 0%, #0f1621 40%, #0a1628 70%, #0d1520 100%)',
-      }} />
+    <div className="min-h-screen min-h-[100dvh] flex flex-col lg:flex-row bg-[#030303] overflow-hidden text-white selection:bg-[#4fd1c5]/30">
+      
+      {/* Left Hemisphere: Branding & Immersive Graphic (Hidden on mobile) */}
+      <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 overflow-hidden border-r border-[#ffffff0a]">
+        {/* Dynamic mesh gradients */}
+        <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] blur-[120px] opacity-40 pointer-events-none"
+             style={{ background: 'radial-gradient(circle at 30% 30%, #153634 0%, transparent 40%), radial-gradient(circle at 70% 60%, #1a2035 0%, transparent 50%)' }} />
+        <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.04] mix-blend-overlay pointer-events-none" />
 
-      {/* Floating orbs */}
-      <div className="absolute top-[-120px] left-[-80px] w-[400px] h-[400px] rounded-full opacity-20"
-        style={{ background: 'radial-gradient(circle, #4fd1c5 0%, transparent 70%)', filter: 'blur(60px)', animation: 'float 8s ease-in-out infinite' }} />
-      <div className="absolute bottom-[-100px] right-[-60px] w-[350px] h-[350px] rounded-full opacity-15"
-        style={{ background: 'radial-gradient(circle, #667eea 0%, transparent 70%)', filter: 'blur(60px)', animation: 'float 10s ease-in-out infinite reverse' }} />
-      <div className="absolute top-[40%] right-[15%] w-[200px] h-[200px] rounded-full opacity-10"
-        style={{ background: 'radial-gradient(circle, #4fd1c5 0%, transparent 70%)', filter: 'blur(40px)', animation: 'float 6s ease-in-out infinite' }} />
-
-      {/* Floating chat bubbles decorations */}
-      <div className="absolute top-12 left-12 hidden lg:flex flex-col gap-3 opacity-20">
-        <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm text-xs text-white max-w-[160px]"
-          style={{ background: '#1a4a3d' }}>Hey, how are you? 👋</div>
-        <div className="px-4 py-2.5 rounded-2xl rounded-br-sm text-xs ml-8 max-w-[160px]"
-          style={{ background: '#1e2a3a', color: '#8fa3b8' }}>I'm great, just got here!</div>
-        <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm text-xs text-white max-w-[180px]"
-          style={{ background: '#1a4a3d' }}>Chatify is amazing 🔥</div>
-      </div>
-
-      <div className="absolute bottom-16 right-12 hidden lg:flex flex-col gap-3 items-end opacity-20">
-        <div className="px-4 py-2.5 rounded-2xl rounded-br-sm text-xs max-w-[160px]"
-          style={{ background: '#1e2a3a', color: '#8fa3b8' }}>Real-time messaging ⚡</div>
-        <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm text-xs text-white max-w-[160px]"
-          style={{ background: '#1a4a3d' }}>End-to-end encrypted 🔒</div>
-      </div>
-
-      {/* Main form card */}
-      <div className="relative z-10 w-full max-w-[420px] mx-4">
-
-        {/* Logo + Title */}
-        <div className="text-center mb-8">
-          <div className="relative inline-block mb-5">
-            <div className="absolute inset-0 rounded-2xl opacity-50 blur-2xl"
-              style={{ background: 'linear-gradient(135deg, #4fd1c5, #667eea)', transform: 'scale(1.6)' }} />
-            <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #0d2137 0%, #132a47 100%)', boxShadow: '0 8px 40px rgba(79,209,197,0.4), 0 0 0 1px rgba(79,209,197,0.2)' }}>
-              <img src="/logo.png" alt="Chatify" className="w-14 h-14 object-contain" style={{ filter: 'drop-shadow(0 2px 8px rgba(79,209,197,0.6))' }} />
-            </div>          </div>
-          <h1 className="text-[28px] font-bold" style={{ color: 'var(--text-primary)' }}>Welcome back</h1>
-          <p className="text-[14px] mt-1" style={{ color: 'var(--text-muted)' }}>Sign in to your Chatify account</p>
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#4fd1c5] to-[#667eea] flex items-center justify-center shadow-[0_0_20px_rgba(79,209,197,0.3)]">
+            <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain drop-shadow-md" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-white">Chatify</span>
         </div>
 
-        {/* Card */}
-        <div className="rounded-2xl p-7 shadow-2xl relative overflow-hidden"
-          style={{
-            background: 'rgba(22, 29, 43, 0.85)',
-            border: '1px solid rgba(79,209,197,0.15)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
-          }}>
-          {/* Card top glow */}
-          <div className="absolute top-0 left-0 right-0 h-[1px]"
-            style={{ background: 'linear-gradient(90deg, transparent, #4fd1c5, #667eea, transparent)' }} />
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest mb-2"
-                style={{ color: 'var(--text-muted)' }}>Email</label>
-              <div className="relative">
-                <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: 'var(--text-muted)' }} />
-                <input
-                  type="email" value={formData.email} onChange={set("email")}
-                  placeholder="you@example.com" required
-                  className="w-full py-3 pl-10 pr-4 rounded-xl text-sm border-none focus:outline-none transition-all"
-                  style={{
-                    background: 'var(--bg-input)', color: 'var(--text-primary)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = 'rgba(79,209,197,0.4)'}
-                  onBlur={(e)  => e.target.style.borderColor = 'rgba(255,255,255,0.06)'}
-                />
+        <div className="relative z-10 max-w-md">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+            className="text-[40px] leading-[1.1] font-medium tracking-tight mb-6"
+          >
+            Connect with the world,<br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4fd1c5] to-[#667eea]">beautifully.</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-[#888] text-lg leading-relaxed"
+          >
+            Experience secure, ultra-fast real-time messaging designed for the modern era. Join millions of users on the world's most elegant communication platform.
+          </motion.p>
+          
+          <div className="mt-12 flex items-center">
+            {/* Mock avatars */}
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-10 h-10 rounded-full border-2 border-[#030303] overflow-hidden relative z-[4-i]" style={{ marginLeft: i !== 0 ? '-12px' : 0 }}>
+                <img src={`https://i.pravatar.cc/100?img=${i+10}`} alt="User" className="w-full h-full object-cover" />
               </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest mb-2"
-                style={{ color: 'var(--text-muted)' }}>Password</label>
-              <div className="relative">
-                <LockIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: 'var(--text-muted)' }} />
-                <input
-                  type={showPw ? "text" : "password"} value={formData.password} onChange={set("password")}
-                  placeholder="Enter your password" required
-                  className="w-full py-3 pl-10 pr-11 rounded-xl text-sm border-none focus:outline-none transition-all"
-                  style={{
-                    background: 'var(--bg-input)', color: 'var(--text-primary)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = 'rgba(79,209,197,0.4)'}
-                  onBlur={(e)  => e.target.style.borderColor = 'rgba(255,255,255,0.06)'}
-                />
-                <button type="button" onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-opacity"
-                  style={{ color: 'var(--text-muted)' }}>
-                  {showPw ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit */}
-            <button type="submit" disabled={isLoggingIn}
-              className="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-all duration-200 mt-2 flex items-center justify-center gap-2"
-              style={{
-                background: isLoggingIn ? 'var(--bg-input)' : 'linear-gradient(135deg, #4fd1c5 0%, #38b2ac 50%, #3182ce 100%)',
-                boxShadow: isLoggingIn ? 'none' : '0 8px 24px rgba(79,209,197,0.25)',
-              }}
-              onMouseEnter={(e) => { if (!isLoggingIn) e.target.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; }}
-            >
-              {isLoggingIn ? <><LoaderIcon className="w-4 h-4 animate-spin" /> Signing in…</> : "Sign In"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-bold transition-colors" style={{ color: '#4fd1c5' }}>
-              Create one
-            </Link>
-          </p>
-        </div>
-
-        {/* Feature badges */}
-        <div className="flex items-center justify-center gap-4 mt-6 flex-wrap">
-          {["🔒 Encrypted", "⚡ Real-time", "🤖 AI Powered"].map((f) => (
-            <span key={f} className="text-[11px] font-medium px-3 py-1 rounded-full"
-              style={{ background: 'rgba(79,209,197,0.08)', color: '#4fd1c5', border: '1px solid rgba(79,209,197,0.15)' }}>
-              {f}
-            </span>
-          ))}
+            ))}
+            <div className="text-sm font-medium text-[#777] ml-4">Over 2m+ users</div>
+          </div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          33% { transform: translateY(-20px) rotate(1deg); }
-          66% { transform: translateY(-10px) rotate(-1deg); }
-        }
-      `}</style>
+      {/* Right Hemisphere: Auth Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
+        {/* Mobile background elements */}
+        <div className="lg:hidden absolute top-[-10%] right-[-10%] w-[300px] h-[300px] bg-[#4fd1c5] opacity-10 blur-[80px] rounded-full pointer-events-none" />
+        <div className="lg:hidden absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-[#667eea] opacity-10 blur-[80px] rounded-full pointer-events-none" />
+
+        <div className="w-full max-w-[380px] relative z-10">
+          
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#4fd1c5] to-[#667eea] flex items-center justify-center shadow-[0_0_20px_rgba(79,209,197,0.3)]">
+              <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain drop-shadow-md" />
+            </div>
+            <span className="text-xl font-bold tracking-tight text-white">Chatify</span>
+          </div>
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <h2 className="text-2xl font-semibold text-white mb-2 tracking-tight">Sign in</h2>
+            <p className="text-[#888] text-sm mb-8">Enter your credentials to access your account.</p>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-[#888] uppercase tracking-wider mb-2">Email Address</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <MailIcon className="h-[18px] w-[18px] text-[#555] group-focus-within:text-[#4fd1c5] transition-colors" />
+                  </div>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={set("email")}
+                    placeholder="name@company.com"
+                    className="block w-full pl-10 pr-4 py-3 bg-[#0d0d0d] border border-[#222] rounded-xl text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#4fd1c5]/50 focus:ring-1 focus:ring-[#4fd1c5] transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-[#888] uppercase tracking-wider">Password</label>
+                  <Link to="#" className="text-xs text-[#4fd1c5] hover:text-[#38b2ac] font-medium transition-colors">Forgot password?</Link>
+                </div>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <LockIcon className="h-[18px] w-[18px] text-[#555] group-focus-within:text-[#4fd1c5] transition-colors" />
+                  </div>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={set("password")}
+                    placeholder="••••••••"
+                    className="block w-full pl-10 pr-4 py-3 bg-[#0d0d0d] border border-[#222] rounded-xl text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#4fd1c5]/50 focus:ring-1 focus:ring-[#4fd1c5] transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full relative flex justify-center py-3.5 px-4 border border-transparent rounded-xl text-sm font-semibold text-[#030303] bg-white hover:bg-[#e6e6e6] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#030303] focus:ring-white disabled:opacity-50 transition-all mt-4"
+              >
+                {isLoggingIn ? (
+                  <LoaderIcon className="w-5 h-5 animate-spin text-[#030303]" />
+                ) : (
+                  <span className="flex items-center gap-2">Sign in <ArrowRightIcon className="w-4 h-4" /></span>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-[#222] text-center">
+              <p className="text-sm text-[#888]">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-white font-medium hover:text-[#4fd1c5] transition-colors">
+                  Create one now
+                </Link>
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }
