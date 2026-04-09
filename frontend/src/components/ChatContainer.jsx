@@ -75,7 +75,7 @@ function AISummaryOverlay({ messages, user, onClose }) {
           ].map(s => (
             <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "#1a1a1a" }}>
               <p className="text-[20px] font-bold text-white">{s.value}</p>
-              <p className="text-[11px] text-[#8696a0] mt-0.5">{s.label}</p>
+              <p className="text-[11px] text-[#a3a3a3] mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
@@ -97,7 +97,7 @@ function AISummaryOverlay({ messages, user, onClose }) {
         {/* Keywords */}
         {keywords.length > 0 && (
           <div className="px-4 pb-4">
-            <p className="text-[11px] font-semibold text-[#8696a0] uppercase tracking-wider mb-2">Key Topics</p>
+            <p className="text-[11px] font-semibold text-[#a3a3a3] uppercase tracking-wider mb-2">Key Topics</p>
             <div className="flex flex-wrap gap-2">
               {keywords.map(k => (
                 <span key={k} className="px-2.5 py-1 rounded-full text-[12px] font-medium capitalize"
@@ -112,7 +112,7 @@ function AISummaryOverlay({ messages, user, onClose }) {
         {/* Last message preview */}
         {lastSender?.text && (
           <div className="px-4 pb-4">
-            <p className="text-[11px] font-semibold text-[#8696a0] uppercase tracking-wider mb-2">Latest Message</p>
+            <p className="text-[11px] font-semibold text-[#a3a3a3] uppercase tracking-wider mb-2">Latest Message</p>
             <div className="rounded-xl p-3" style={{ background: "#1a1a1a" }}>
               <p className="text-[13px] text-[#d1d7db] line-clamp-2">{lastSender.text}</p>
             </div>
@@ -232,7 +232,7 @@ export default function ChatContainer() {
           <div className="w-0.5 h-7 rounded-full flex-shrink-0" style={{ background: "white" }} />
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white">📌 Pinned Message</p>
-            <p className="text-[12px] truncate text-[#8696a0]">
+            <p className="text-[12px] truncate text-[#a3a3a3]">
               {pinnedMessage.document ? "📄 Document" : pinnedMessage.image ? "📷 Photo" : pinnedMessage.audio ? "🎤 Voice" : pinnedMessage.text}
             </p>
           </div>
@@ -245,7 +245,7 @@ export default function ChatContainer() {
          visible.length === 0 && searchQuery ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <div className="text-5xl opacity-30">🔍</div>
-            <p className="text-sm text-[#8696a0]">No results for "{searchQuery}"</p>
+            <p className="text-sm text-[#a3a3a3]">No results for "{searchQuery}"</p>
           </div>
         ) : visible.length === 0 ? (
           <NoChatHistoryPlaceholder name={selectedUser.fullName} />
@@ -292,7 +292,7 @@ export default function ChatContainer() {
                           exit={{ opacity: 0, scale: 0.85, y: 4 }}
                           transition={{ duration: 0.12 }}
                           className={`absolute z-30 -top-9 ${isMine ? "right-0" : "left-0"} flex items-center gap-[2px] px-2 py-1.5 rounded-full shadow-2xl`}
-                          style={{ background: "#182229", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}
+                          style={{ background: "#111111", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}
                           onMouseEnter={() => setHovered(msg._id)}
                           onMouseLeave={() => setHovered(null)}
                         >
@@ -320,7 +320,7 @@ export default function ChatContainer() {
                     >
                       {/* Forwarded label */}
                       {msg.isForwarded && !msg.isDeletedForAll && (
-                        <p className="text-[11px] italic mb-1.5 flex items-center gap-1 text-[#8696a0]">
+                        <p className="text-[11px] italic mb-1.5 flex items-center gap-1 text-[#a3a3a3]">
                           <span className="opacity-60">↪</span> Forwarded
                         </p>
                       )}
@@ -330,15 +330,15 @@ export default function ChatContainer() {
                         <div className="mb-2 px-2.5 py-1.5 rounded-lg relative overflow-hidden"
                           style={{ background: isMine ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.25)", borderLeft: "3px solid white" }}>
                           <p className="text-[11px] font-semibold mb-0.5 text-white">{msg.replyTo.senderName}</p>
-                          {msg.replyTo.image && <p className="text-[12px] text-[#8696a0]">📷 Photo</p>}
-                          {msg.replyTo.audio && <p className="text-[12px] text-[#8696a0]">🎤 Voice message</p>}
-                          {msg.replyTo.document && <p className="text-[12px] text-[#8696a0]">📄 Document</p>}
+                          {msg.replyTo.image && <p className="text-[12px] text-[#a3a3a3]">📷 Photo</p>}
+                          {msg.replyTo.audio && <p className="text-[12px] text-[#a3a3a3]">🎤 Voice message</p>}
+                          {msg.replyTo.document && <p className="text-[12px] text-[#a3a3a3]">📄 Document</p>}
                           {msg.replyTo.text && <p className="text-[12px] text-[#d1d7db] line-clamp-2">{msg.replyTo.text}</p>}
                         </div>
                       )}
 
                       {msg.isDeletedForAll ? (
-                        <p className="text-[13px] italic text-[#8696a0] flex items-center gap-1.5">
+                        <p className="text-[13px] italic text-[#a3a3a3] flex items-center gap-1.5">
                           <span className="text-base">🚫</span> This message was deleted
                         </p>
                       ) : (
@@ -372,7 +372,7 @@ export default function ChatContainer() {
                             {timeLeft}
                           </span>
                         )}
-                        <span className="text-[11px]" style={{ color: isMine ? "rgba(255,255,255,0.45)" : "#8696a0" }}>
+                        <span className="text-[11px]" style={{ color: isMine ? "rgba(255,255,255,0.45)" : "#a3a3a3" }}>
                           {new Date(msg.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
                         </span>
                         {isMine && <MessageTicks message={msg} />}
@@ -524,7 +524,7 @@ function DatePill({ date }) {
   return (
     <div className="flex justify-center my-4">
       <span className="text-[12px] px-4 py-1 rounded-full select-none"
-        style={{ background: "#182229", color: "#8696a0", border: "1px solid rgba(255,255,255,0.06)" }}>
+        style={{ background: "#111111", color: "#a3a3a3", border: "1px solid rgba(255,255,255,0.06)" }}>
         {label}
       </span>
     </div>
@@ -666,7 +666,7 @@ function AudioBubble({ src, isMine }) {
             })}
           </div>
         </div>
-        <p className="text-[10px] mt-0.5 pl-10" style={{ color: isMine ? "rgba(255,255,255,0.5)" : "#8696a0" }}>
+        <p className="text-[10px] mt-0.5 pl-10" style={{ color: isMine ? "rgba(255,255,255,0.5)" : "#a3a3a3" }}>
           {fmtTime(playing || progress > 0 ? progress : duration)}
         </p>
       </div>
@@ -742,7 +742,7 @@ function DocumentBubble({ doc, isMine }) {
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium truncate text-white">{doc.filename || "Document"}</p>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[10px] uppercase font-bold" style={{ color: isMine ? "rgba(255,255,255,0.55)" : "#8696a0" }}>
+          <span className="text-[10px] uppercase font-bold" style={{ color: isMine ? "rgba(255,255,255,0.55)" : "#a3a3a3" }}>
             {ext || "?"}
           </span>
           <span className="text-[10px]" style={{ color: isMine ? "rgba(255,255,255,0.4)" : "#667781" }}>

@@ -46,7 +46,7 @@ export default function AIChatWindow({ onClose }) {
 
         <div className="flex-1">
           <p className="text-[15px] font-bold text-white">Chatify AI</p>
-          <p className="text-[11px]" style={{ color: retryAfter > 0 ? '#f6ad55' : '#00a884' }}>
+          <p className="text-[11px]" style={{ color: retryAfter > 0 ? '#f6ad55' : '#ffffff' }}>
             {retryAfter > 0 ? `⏳ Cooling down ${retryAfter}s…` : "Always online · Powered by Gemini AI"}
           </p>
         </div>
@@ -157,7 +157,7 @@ export default function AIChatWindow({ onClose }) {
             placeholder={retryAfter > 0 ? `Cooling down… ${retryAfter}s` : "Ask me anything…"}
             disabled={isBlocked}
             className="flex-1 bg-transparent border-none focus:outline-none text-[15px]"
-            style={{ color: isBlocked ? '#8696a0' : '#d1d7db' }}
+            style={{ color: isBlocked ? '#a3a3a3' : '#d1d7db' }}
           />
           <button
             onClick={handleSend}

@@ -36,7 +36,7 @@ function MessageTicks({ message }) {
 
   if (isDelivered) {
     return (
-      <span className="inline-flex items-center text-[#8696a0]" title="Delivered" aria-label="Delivered">
+      <span className="inline-flex items-center text-[#a3a3a3]" title="Delivered" aria-label="Delivered">
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="2 13 7 18 16 7" />
           <polyline points="8 13 13 18 22 7" />
@@ -47,7 +47,7 @@ function MessageTicks({ message }) {
 
   // Single grey tick
   return (
-    <span className="inline-flex items-center text-[#8696a0]" title="Sent" aria-label="Sent">
+    <span className="inline-flex items-center text-[#a3a3a3]" title="Sent" aria-label="Sent">
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="5 13 10 18 20 7" />
       </svg>

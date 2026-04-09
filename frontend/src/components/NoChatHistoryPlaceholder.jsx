@@ -6,7 +6,7 @@ export default function NoChatHistoryPlaceholder({ name }) {
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 p-8 select-none">
-      <div className="w-16 h-16 rounded-full bg-[#182229] flex items-center justify-center">
+      <div className="w-16 h-16 rounded-full bg-[#111111] flex items-center justify-center">
         <svg className="w-8 h-8 text-slate-600" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>

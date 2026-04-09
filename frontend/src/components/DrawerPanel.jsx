@@ -153,7 +153,7 @@ export default function DrawerPanel({ isOpen, onClose }) {
                             </div>
                             <span className="font-medium text-[15px] text-white">{section.label}</span>
                           </div>
-                          <ChevronRight size={18} className="text-[#8696a0] group-hover:text-white transition-colors" />
+                          <ChevronRight size={18} className="text-[#a3a3a3] group-hover:text-white transition-colors" />
                         </button>
                       ))}
 
@@ -191,7 +191,7 @@ export default function DrawerPanel({ isOpen, onClose }) {
                       </div>
                       {isUpdatingProfile && (
                         <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60">
-                          <div className="w-6 h-6 border-2 border-t-[#00a884] border-white/20 rounded-full animate-spin" />
+                          <div className="w-6 h-6 border-2 border-t-[#ffffff] border-white/20 rounded-full animate-spin" />
                         </div>
                       )}
                       <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
@@ -199,28 +199,28 @@ export default function DrawerPanel({ isOpen, onClose }) {
                     
                     <div className="w-full space-y-6">
                       <div>
-                        <label className="text-xs text-[#00a884] uppercase tracking-widest font-semibold mb-2 block">Your Name</label>
+                        <label className="text-xs text-[#ffffff] uppercase tracking-widest font-semibold mb-2 block">Your Name</label>
                         <input 
                           type="text" 
                           value={editName} 
                           onChange={(e) => setEditName(e.target.value)}
-                          className="w-full bg-[#111111] border-b-2 border-[#262626] focus:border-[#00a884] p-2 text-white outline-none transition-colors" 
+                          className="w-full bg-[#111111] border-b-2 border-[#262626] focus:border-[#ffffff] p-2 text-white outline-none transition-colors" 
                         />
-                        <p className="text-[11px] text-[#8696a0] mt-2">This is not your username or pin. This name will be visible to your contacts.</p>
+                        <p className="text-[11px] text-[#a3a3a3] mt-2">This is not your username or pin. This name will be visible to your contacts.</p>
                       </div>
                       <div>
-                        <label className="text-xs text-[#00a884] uppercase tracking-widest font-semibold mb-2 block">About</label>
+                        <label className="text-xs text-[#ffffff] uppercase tracking-widest font-semibold mb-2 block">About</label>
                         <input 
                           type="text" 
                           value={editBio} 
                           onChange={(e) => setEditBio(e.target.value)}
-                          className="w-full bg-[#111111] border-b-2 border-[#262626] focus:border-[#00a884] p-2 text-white outline-none transition-colors" 
+                          className="w-full bg-[#111111] border-b-2 border-[#262626] focus:border-[#ffffff] p-2 text-white outline-none transition-colors" 
                         />
                       </div>
                       <button 
                         onClick={handleSaveProfile}
                         disabled={saveLoading}
-                        className="w-full py-3 bg-[#00a884] text-black font-bold rounded-xl hover:bg-[#00c298] transition-colors mt-4 flex items-center justify-center"
+                        className="w-full py-3 bg-[#ffffff] text-black font-bold rounded-xl hover:bg-[#00c298] transition-colors mt-4 flex items-center justify-center"
                       >
                         {saveLoading ? "Saving..." : "Save Profile"}
                       </button>
@@ -244,7 +244,7 @@ export default function DrawerPanel({ isOpen, onClose }) {
                                   key={t} 
                                   onClick={() => setTheme(t)}
                                   className={`p-3 rounded-xl border transition-all capitalize flex items-center justify-between
-                                    ${theme === t ? 'bg-[#00a884]/20 border-[#00a884] text-[#00a884]' : 'bg-[#141414] border-[#262626] text-white hover:border-[#555]'}`}
+                                    ${theme === t ? 'bg-[#ffffff]/20 border-[#ffffff] text-[#ffffff]' : 'bg-[#141414] border-[#262626] text-white hover:border-[#555]'}`}
                                 >
                                   {t}
                                   {theme === t && <CheckIcon size={16} />}
@@ -267,11 +267,11 @@ export default function DrawerPanel({ isOpen, onClose }) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-white font-medium">Message Sounds</p>
-                          <p className="text-xs text-[#8696a0]">Play sounds for incoming messages</p>
+                          <p className="text-xs text-[#a3a3a3]">Play sounds for incoming messages</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" checked={isSoundEnabled} onChange={toggleSound} />
-                          <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00a884]"></div>
+                          <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ffffff]"></div>
                         </label>
                       </div>
                     </div>
@@ -289,11 +289,11 @@ export default function DrawerPanel({ isOpen, onClose }) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-white font-medium">Read Receipts</p>
-                          <p className="text-xs text-[#8696a0]">If turned off, you won't send or receive Read Receipts.</p>
+                          <p className="text-xs text-[#a3a3a3]">If turned off, you won't send or receive Read Receipts.</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" checked={readReceipts} onChange={() => setReadReceipts(!readReceipts)} />
-                          <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00a884]"></div>
+                          <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ffffff]"></div>
                         </label>
                       </div>
                       <div className="pt-4 border-t border-[#262626]">
@@ -323,11 +323,11 @@ export default function DrawerPanel({ isOpen, onClose }) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-white font-medium">Auto-Download Media</p>
-                          <p className="text-xs text-[#8696a0]">Automatically download photos/videos</p>
+                          <p className="text-xs text-[#a3a3a3]">Automatically download photos/videos</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" checked={autoDwnMedia} onChange={() => setAutoDwnMedia(!autoDwnMedia)} />
-                          <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00a884]"></div>
+                          <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ffffff]"></div>
                         </label>
                       </div>
                     </div>
@@ -341,11 +341,11 @@ export default function DrawerPanel({ isOpen, onClose }) {
                     animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }}
                     className="p-6 flex flex-col items-center justify-center pt-20"
                   >
-                    <div className="w-20 h-20 bg-[#00a884] rounded-full flex items-center justify-center mb-4">
+                    <div className="w-20 h-20 bg-[#ffffff] rounded-full flex items-center justify-center mb-4">
                       <HelpCircle size={40} className="text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">Chatify Web</h3>
-                    <p className="text-[#8696a0] text-sm mb-6">Version 2.7.1</p>
+                    <p className="text-[#a3a3a3] text-sm mb-6">Version 2.7.1</p>
                     
                     <button className="w-full py-3 bg-[#141414] hover:bg-[#262626] border border-[#262626] text-white font-medium rounded-xl transition-colors mb-3">
                       Contact Us
