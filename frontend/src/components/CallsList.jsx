@@ -6,34 +6,23 @@ import { useCallStore } from "../store/useCallStore";
 
 export default function CallsList() {
   const { chats } = useChatStore();
-  const { startCall } = useCallStore();
+  const { startCall, callHistory } = useCallStore();
   const [activeCallFilter, setActiveCallFilter] = useState("all");
-  const [now] = useState(() => Date.now());
 
-  // Generate realistic-looking call history from existing chat partners
-  const callHistory = chats.slice(0, 12).map((c, i) => {
-    const types = ["incoming", "outgoing", "missed", "incoming", "outgoing"];
-    const callType = types[i % types.length];
-    const mins = 2 + ((i * 7) % 43);
-    const hoursAgo = 1 + ((i * 5) % 72);
-    const isVideo = i % 3 === 0;
-    const date = new Date(now - hoursAgo * 3600 * 1000);
+  const getUserData = (userId) => chats.find(c => c._id === userId) || { fullName: "Unknown User", profilePic: "/avatar.png", _id: userId };
 
-    return {
-      _id: c._id + "-call-" + i,
-      user: c,
-      type: callType,
-      isVideo,
-      duration: callType === "missed" ? null : `${Math.floor(mins / 60) > 0 ? Math.floor(mins / 60) + ":" : ""}${String(mins % 60).padStart(2,"0")}:${String(i * 7 % 60).padStart(2,"0")}`,
-      timestamp: date,
-    };
-  });
+  const enrichedHistory = callHistory.map(call => ({
+    ...call,
+    user: getUserData(call.userId),
+    timestamp: new Date(call.timestamp)
+  }));
 
   const filtered = activeCallFilter === "missed"
-    ? callHistory.filter(c => c.type === "missed")
-    : callHistory;
+    ? enrichedHistory.filter(c => c.type === "missed")
+    : enrichedHistory;
 
   function formatTime(date) {
+    if (!date) return "";
     const now = new Date();
     const diff = now - date;
     const days = Math.floor(diff / 86400000);

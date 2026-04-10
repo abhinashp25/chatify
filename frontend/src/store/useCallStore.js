@@ -1,7 +1,9 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { useAuthStore } from "./useAuthStore";
+import { useChatStore } from "./useChatStore";
 
-export const useCallStore = create((set, get) => ({
+export const useCallStore = create(persist((set, get) => ({
   localStream: null,
   remoteStream: null,
   peerConnection: null,
@@ -9,6 +11,20 @@ export const useCallStore = create((set, get) => ({
   incomingCall: null, // { from, name, signal, isVideo }
   isMuted: false,
   isVideoOff: false,
+  
+  callHistory: [], // Real call history { id, user, type: "outgoing"|"incoming"|"missed", isVideo, timestamp, duration }
+  currentCallStartTime: null,
+  currentCallUser: null,
+  currentCallIsVideo: false,
+  currentCallType: null,
+
+  addCallToHistory: (callData) => {
+    set({ callHistory: [callData, ...get().callHistory] });
+  },
+  
+  clearCallHistory: () => {
+    set({ callHistory: [] });
+  },
 
   initListeners: () => {
     const socket = useAuthStore.getState().socket;
@@ -52,7 +68,15 @@ export const useCallStore = create((set, get) => ({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
-      set({ localStream: stream, callState: "RINGING", isVideoOff: !isVideo });
+      set({ 
+        localStream: stream, 
+        callState: "RINGING", 
+        isVideoOff: !isVideo,
+        currentCallStartTime: Date.now(),
+        currentCallUser: userToCall,
+        currentCallIsVideo: isVideo,
+        currentCallType: "outgoing"
+      });
 
       const pc = get().createPeerConnection(userToCall);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -80,7 +104,15 @@ export const useCallStore = create((set, get) => ({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: incomingCall.isVideo, audio: true });
-      set({ localStream: stream, callState: "IN_CALL", isVideoOff: !incomingCall.isVideo });
+      set({ 
+        localStream: stream, 
+        callState: "IN_CALL", 
+        isVideoOff: !incomingCall.isVideo,
+        currentCallStartTime: Date.now(),
+        currentCallUser: incomingCall.from,
+        currentCallIsVideo: incomingCall.isVideo,
+        currentCallType: "incoming"
+      });
 
       const pc = get().createPeerConnection(incomingCall.from);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -101,13 +133,23 @@ export const useCallStore = create((set, get) => ({
     const { incomingCall } = get();
     if (incomingCall) {
       socket.emit("rejectCall", { to: incomingCall.from });
-      set({ incomingCall: null, callState: "IDLE" });
+      // Keep track of this call as missed
+      const missedCall = {
+        _id: Date.now().toString(),
+        userId: incomingCall.from,
+        type: "missed",
+        isVideo: incomingCall.isVideo,
+        timestamp: Date.now(),
+        duration: null
+      };
+      
+      set({ incomingCall: null, callState: "IDLE", callHistory: [missedCall, ...get().callHistory] });
     }
   },
 
   endCall: (emit = true) => {
     const socket = useAuthStore.getState().socket;
-    const { peerConnection, localStream, incomingCall } = get();
+    const { peerConnection, localStream, incomingCall, currentCallStartTime, currentCallUser, currentCallIsVideo, currentCallType, callHistory } = get();
 
     if (emit && peerConnection) {
       // Find the remote user we were talking to - typically handled by knowing who initiated.
@@ -118,6 +160,23 @@ export const useCallStore = create((set, get) => ({
     if (peerConnection) peerConnection.close();
     if (localStream) localStream.getTracks().forEach((track) => track.stop());
 
+    let finalHistory = callHistory;
+    if (currentCallStartTime && currentCallUser) {
+      const now = Date.now();
+      const diffSecs = Math.floor((now - currentCallStartTime)/1000);
+      const isMissed = get().callState === "RINGING" || get().callState === "IDLE";
+      
+      const newCallData = {
+        _id: now.toString(),
+        userId: currentCallUser,
+        type: isMissed ? "missed" : currentCallType,
+        isVideo: currentCallIsVideo,
+        timestamp: currentCallStartTime,
+        duration: isMissed ? null : `${Math.floor(diffSecs/60)}:${String(diffSecs%60).padStart(2,'0')}`
+      };
+      finalHistory = [newCallData, ...callHistory];
+    }
+
     set({
       localStream: null,
       remoteStream: null,
@@ -126,6 +185,11 @@ export const useCallStore = create((set, get) => ({
       incomingCall: null,
       isMuted: false,
       isVideoOff: false,
+      currentCallStartTime: null,
+      currentCallUser: null,
+      currentCallIsVideo: false,
+      currentCallType: null,
+      callHistory: finalHistory
     });
   },
 
@@ -164,4 +228,7 @@ export const useCallStore = create((set, get) => ({
       set({ isVideoOff: !isVideoOff });
     }
   }
+}), {
+  name: 'call-history-storage',
+  partialize: (state) => ({ callHistory: state.callHistory })
 }));
