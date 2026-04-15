@@ -177,8 +177,8 @@ export default function ChatContainer() {
   }, []);
 
   const visible = searchQuery.trim()
-    ? messages.filter((m) => m.text?.toLowerCase().includes(searchQuery.toLowerCase()))
-    : messages;
+    ? (messages || []).filter((m) => m.text?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : (messages || []);
 
   const myReactionOn = (msg) =>
     msg.reactions?.find((r) => r.userId === authUser._id || r.userId?._id === authUser._id)?.emoji;

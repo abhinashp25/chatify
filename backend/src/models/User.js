@@ -1,43 +1,63 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    fullName: {
-        type: String,
-        required: true,
-    },
-    password: {
-        type: String,
-        required: true,
-        minlength: 6       
-    },
-    profilePic: {
-        type: String,
-        default: ""
-    },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  fullName: {
+    type: String,
+    required: true,
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6,
+  },
+  profilePic: {
+    type: String,
+    default: "",
+  },
+  bio: {
+    type: String,
+    default: "",
+    maxlength: 160,
+  },
+  status: {
+    type: String,
+    default: "Hey there! I am using Chatify",
+    maxlength: 139,
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now,
+  },
+  archivedChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
-    bio: { 
-        type: String,
-        default: "",
-        maxlength: 160 
-    },
+  disappearTimers: {
+    type: Map,
+    of: Number,
+    default: {},
+  },
 
-    status:     { type: String, default: "Hey there! I am using Chatify", maxlength: 139 },
-    lastSeen:   { type: Date, default: Date.now },    
-    archivedChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  // --- blocking ---
+  blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
-    disappearTimers: {
-      type: Map,
-      of: Number,
-      default: {},
-    },
-    
-}, {timestamps: true}); 
+  // --- privacy settings ---
+  privacySettings: {
+    readReceipts:    { type: Boolean, default: true },
+    lastSeenFor:     { type: String, enum: ["everyone", "contacts", "nobody"], default: "everyone" },
+    profilePhotoFor: { type: String, enum: ["everyone", "contacts", "nobody"], default: "everyone" },
+  },
+
+  // --- two-factor auth ---
+  twoFA: {
+    enabled:   { type: Boolean, default: false },
+    otpHash:   { type: String, select: false },
+    otpExpiry: { type: Date, select: false },
+  },
+}, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
-
 export default User;
